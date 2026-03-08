@@ -39,9 +39,9 @@
 )
 #let student4 = (
   name: "Shashwat Modi",
-  netid: "",
-  email: "@cornell.edu",
-  department: "",
+  netid: "sm3225",
+  email: "sm3225@cornell.edu",
+  department: "MPS, Data Science & Applied Statistics",
   organization: "Cornell University",
   location: "Ithaca, NY, USA",
 )
