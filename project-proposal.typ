@@ -23,7 +23,7 @@
 )
 #let student2 = (
   name: "Younghyun Jung",
-  netid: "",
+  netid: "yj582",
   email: "@cornell.edu",
   department: "MEng, Computer Science",
   organization: "Cornell University",
