@@ -31,8 +31,8 @@
 )
 #let student3 = (
   name: "Swathi Saravana Selvam",
-  netid: "",
-  email: "@cornell.edu",
+  netid: "ss4522",
+  email: "ss4522@cornell.edu",
   department: "MEng, Computer Science",
   organization: "Cornell University",
   location: "Ithaca, NY, USA",
@@ -195,6 +195,8 @@
 
 - Our main target is the average accuracy improvement of DoRA over LoRA under a matched setup.
 
+- Additionally, we will introduce a novel ablation study to analyze the geometric properties of the network. We will evaluate whether DoRA's magnitude decomposition yields higher accuracy gains than standard LoRA when isolated to routing information (attention layers) versus retrieving facts (MLP layers).
+
 - Our preferred setup is the official LLaMA-7B-style commonsense experiment.
 
 - If model access or runtime limits make that difficult, we will use the official Llama-2-7B or Llama-3-8B commonsense setup instead.
@@ -205,7 +207,10 @@
 = Re-implementation Plan
 
 
-- #strong[Architecture and method:] We will fine-tune a frozen Llama-family base model with LoRA and DoRA adapters and compare them under the same setup. We will follow the official [NVlabs commonsense reasoning scripts](https://github.com/NVlabs/DoRA/tree/main/commonsense_reasoning). DoRA will be applied to `q_proj`, `k_proj`, `v_proj`, `up_proj`, and `down_proj`.
+- #strong[Architecture and method:] We will fine-tune a frozen Llama-family base model following the official [NVlabs commonsense reasoning scripts](https://github.com/NVlabs/DoRA/tree/main/commonsense_reasoning). To execute our ablation study, we will evaluate both LoRA and DoRA across three distinct configurations:
+  1. Full adaptation applied to `q_proj`, `k_proj`, `v_proj`, `up_proj`, and `down_proj`.
+  2. Attention-only adaptation applied strictly to `q_proj`, `k_proj`, and `v_proj`.
+  3. MLP-only adaptation applied strictly to `up_proj` and `down_proj`.
 
 - #strong[Models:] Our first choice is the default LLaMA-7B setting. If access is blocked, we will use the officially released Llama-2-7B or Llama-3-8B setup.
 
@@ -215,7 +220,19 @@
 
 - #strong[Tools:] We will use the official NVlabs DoRA code when possible, Hugging Face `transformers`, and Hugging Face `peft` with DoRA support. Training and evaluation will be run mainly on Google Colab Pro, while the M4 MacBook Pro will be used for debugging, plotting, and organizing results.
 
-- #strong[Compute and time:] Since all four team members have Google Colab Pro, the project is feasible. A main 7B or 8B fine-tuning run should take about half a day to one day, depending on the GPU assigned by Colab. Full evaluation should take a few hours. This is realistic for our team because we can split runs and analysis across four Colab Pro accounts.
+- #strong[Compute and time:] Since all four team members have Google Colab Pro, the project is feasible. A main 7B or 8B fine-tuning run should take about half a day to one day, depending on the GPU assigned by Colab. Full evaluation should take a few hours. This is highly realistic for our team; the six primary experimental runs (Full, Attention-only, and MLP-only for both LoRA and DoRA) can be distributed efficiently across our four Colab Pro accounts, requiring at most two fine-tuning runs per member.
 
 
+= Project Milestones and Timeline
 
+
+- #strong[Week 1 (Setup & Baselines):] Finalize Colab Pro environments, acquire LLaMA-7B/8B weights, and test the official NVlabs `commonsense_reasoning` scripts.
+- #strong[Weeks 2-3 (Ablation Execution):] Execute the six fine-tuning runs (Full, Attention-only, and MLP-only for both LoRA and DoRA) concurrently across the four Colab Pro accounts.
+- #strong[Week 4 (Evaluation):] Run the 8 benchmark datasets (BoolQ, PIQA, etc.) on all six fine-tuned models to generate the final accuracy metrics.
+- #strong[Week 5 (Analysis & Writing):] Compile the results, perform the comparative statistical analysis of the layer-specific adaptations, and draft the final report.
+
+
+= Compute Management & Fault Tolerance
+
+
+- #strong[Colab Session Limits:] To ensure uninterrupted progress during the 12-to-24 hour fine-tuning runs, we will implement rigorous automated checkpointing. The training scripts will be modified to save model weights and optimizer states directly to Google Drive at regular epoch intervals, allowing any preempted Colab sessions to resume seamlessly.
