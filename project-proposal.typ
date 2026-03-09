@@ -24,7 +24,7 @@
 #let student2 = (
   name: "Younghyun Jung",
   netid: "yj582",
-  email: "@cornell.edu",
+  email: "yj582@cornell.edu",
   department: "MEng, Computer Science",
   organization: "Cornell University",
   location: "Ithaca, NY, USA",
@@ -227,8 +227,11 @@
 
 
 - #strong[Week 1 (Setup & Baselines):] Finalize Colab Pro environments, acquire LLaMA-7B/8B weights, and test the official NVlabs `commonsense_reasoning` scripts.
+
 - #strong[Weeks 2-3 (Ablation Execution):] Execute the six fine-tuning runs (Full, Attention-only, and MLP-only for both LoRA and DoRA) concurrently across the four Colab Pro accounts.
+
 - #strong[Week 4 (Evaluation):] Run the 8 benchmark datasets (BoolQ, PIQA, etc.) on all six fine-tuned models to generate the final accuracy metrics.
+
 - #strong[Week 5 (Analysis & Writing):] Compile the results, perform the comparative statistical analysis of the layer-specific adaptations, and draft the final report.
 
 
