@@ -88,6 +88,7 @@ def load_trained_model(
         "PreTrainedModel",
         AutoModelForCausalLM.from_pretrained(
             spec.model.model_id,
+            attn_implementation="sdpa",
             token=token,
             trust_remote_code=spec.model.trust_remote_code,
         ),

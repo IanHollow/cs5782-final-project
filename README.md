@@ -11,7 +11,7 @@ The target reproduction is the paper's commonsense reasoning result: DoRA should
 - `code/src/dora_repro/`: typed Python package for auth, configs, data prep, adapters, training, evaluation, and summarization
 - `code/tests/`: unit and smoke tests
 - `code/configs/`: TOML presets for models, runtimes, and default experiments
-- `data/`: local training data, benchmark JSONL files, model snapshots, and a cache area
+- `data/`: local training data, benchmark JSONL files, and a cache area
 - `results/`, `poster/`, `report/`: course deliverables and experiment outputs
 - `notebooks/`: Colab-friendly quickstart assets
 
@@ -64,8 +64,8 @@ uv run python -m dora_repro.cli train \
   --model llama2_7b \
   --method dora \
   --scope full \
-  --runtime colab_t4 \
-  --experiment paper_llama2_7b
+  --runtime colab_l4_llama \
+  --experiment paper_colab
 ```
 
 Evaluate and summarize:
@@ -88,8 +88,27 @@ Google Colab:
 
 - Run `notebooks/bootstrap_colab.sh` after cloning the repo.
 - Set `HF_TOKEN` or `HF_TOKEN_PATH` for gated Llama access.
-- Use the `colab_t4` or `colab_l4_a100` runtime preset depending on the GPU.
+- Use the LLaMA-focused runtime preset that matches the allocated GPU:
+  - `colab_t4_llama`
+  - `colab_l4_llama`
+  - `colab_a100_40gb_llama`
+  - `colab_a100_80gb_llama`
 - To avoid spending GPU time on downloads, first run `prepare-assets` on a CPU runtime while the repo is mounted on Google Drive. Benchmarks are stored under `data/benchmarks/`, and model weights are prefetched into the standard Hugging Face cache controlled by `HF_HOME` / `HF_HUB_CACHE`.
+
+Recommended Colab choices for this repo:
+
+- `L4 + paper_colab`: best cost/performance tradeoff for the 7B and 8B runs in this repo.
+- `A100 40GB + paper_colab`: fastest sensible option if you want same-day turnaround.
+- `T4 + debug_quick`: use for smoke tests and tiny-debug validation, not for the full paper-scale runs unless you are willing to wait a long time.
+
+Rough wall-clock estimates for the full `paper_colab` experiment on this repo's 170k dataset, assuming the model and benchmarks were prefetched on CPU first:
+
+- `T4`: roughly 24 to 36 hours for training, plus about 2 to 3 hours for the 8-task evaluation pass.
+- `L4`: roughly 10 to 16 hours for training, plus about 45 to 75 minutes for evaluation.
+- `A100 40GB`: roughly 4 to 7 hours for training, plus about 20 to 40 minutes for evaluation.
+- `A100 80GB`: roughly 3.5 to 6 hours for training, plus about 20 to 35 minutes for evaluation.
+
+These are planning estimates, not guarantees. Actual Colab times vary with current allocation, tokenizer length distribution, Drive throughput, and whether your session spends time downloading assets.
 
 CPU-first asset preparation example:
 
@@ -114,7 +133,7 @@ Aggregate summaries are written to `results/summary/summary.csv` and `results/su
 
 ## Conclusion
 
-The repo is organized around a faithful but maintainable reproduction path: modern PEFT DoRA adapters, config-driven experiment presets, local-first datasets and model snapshots, Colab-aware runtimes, and strict repository checks. That makes it usable both as a class deliverable and as a clean baseline for follow-up ablations.
+The repo is organized around a faithful but maintainable reproduction path: modern PEFT DoRA adapters, config-driven experiment presets, local-first datasets, Hugging Face cache-aware model loading, Colab-aware runtimes, and strict repository checks. That makes it usable both as a class deliverable and as a clean baseline for follow-up ablations.
 
 ## References
 

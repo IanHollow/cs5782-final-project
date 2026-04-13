@@ -13,6 +13,11 @@ def test_load_model_and_runtime_presets() -> None:
     assert runtime.use_4bit is True
     assert runtime.gradient_accumulation_steps == 16
 
+    l4_runtime = load_runtime_preset("colab_l4_llama")
+    assert l4_runtime.per_device_batch_size == 4
+    assert l4_runtime.gradient_accumulation_steps == 4
+    assert l4_runtime.gradient_checkpointing is False
+
 
 def test_build_experiment_uses_scope_modules() -> None:
     spec = build_experiment(
@@ -37,4 +42,18 @@ def test_build_debug_quick_experiment_uses_small_training_subset() -> None:
     assert spec.train_data_path.name == "commonsense_15k.json"
     assert spec.max_train_samples == 512
     assert spec.num_epochs == 1
+    assert spec.train_on_inputs is False
+
+
+def test_build_paper_colab_experiment_uses_lower_overhead_schedule() -> None:
+    spec = build_experiment(
+        model_name="llama3_8b",
+        method="dora",
+        scope="full",
+        runtime_name="colab_l4_llama",
+        experiment_name="paper_colab",
+    )
+    assert spec.num_epochs == 3
+    assert spec.save_steps == 2000
+    assert spec.eval_steps == 2000
     assert spec.train_on_inputs is False

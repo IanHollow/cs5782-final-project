@@ -42,6 +42,12 @@ uv run python -m dora_repro.cli prepare-assets --models all
 
 For gated Llama models, make sure `HF_TOKEN` or `HF_TOKEN_PATH` is set first. In Colab, set `HF_HOME` / `HF_HUB_CACHE` to a Google Drive location before running the command so the standard Hugging Face cache lives on Drive.
 
+For the full 7B and 8B runs in this repo, prefer the `paper_colab` experiment with one of the LLaMA-focused runtime presets:
+
+- `colab_l4_llama` for the best cost/performance balance
+- `colab_a100_40gb_llama` for faster turnaround
+- `colab_t4_llama` only for budget-constrained or overnight runs
+
 ## Cache
 
 Temporary dataset caches and logs are stored under `data/cache/`.

@@ -105,6 +105,7 @@ def load_model_and_tokenizer(
         "PreTrainedModel",
         AutoModelForCausalLM.from_pretrained(
             spec.model.model_id,
+            attn_implementation="sdpa",
             device_map=device_map,
             low_cpu_mem_usage=spec.runtime.use_4bit,
             token=token,
