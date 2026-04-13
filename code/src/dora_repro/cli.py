@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from dora_repro.assets import available_model_presets, prefetch_model_to_hf_cache
 from dora_repro.config import TASKS, build_experiment, repo_root
 from dora_repro.data import normalize_all_benchmarks, normalize_training_data
 from dora_repro.eval import evaluate_run
@@ -40,6 +41,17 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--cache-dir", default="data/cache")
     prepare.add_argument("--train-source", default="auto")
     prepare.add_argument("--limit", type=int, default=None)
+
+    assets = subparsers.add_parser("prepare-assets")
+    assets.add_argument("--cache-dir", default="data/cache")
+    assets.add_argument("--train-source", default="auto")
+    assets.add_argument("--limit", type=int, default=None)
+    assets.add_argument(
+        "--models",
+        nargs="*",
+        default=(),
+        help="Model preset names to download locally, or pass 'all' to fetch every configured preset.",
+    )
 
     train = subparsers.add_parser("train")
     train.add_argument("--model", default="llama2_7b")
@@ -85,6 +97,51 @@ def _prepare_data_command(args: Namespace, logger: logging.Logger) -> int:
     sys.stdout.write(f"training={normalized_train}\n")
     for task, path in normalized_eval.items():
         sys.stdout.write(f"{task}={path}\n")
+    return 0
+
+
+def _resolve_requested_models(raw_models: tuple[str, ...] | list[str]) -> tuple[str, ...]:
+    configured = available_model_presets()
+    if not raw_models:
+        return ()
+    if "all" in raw_models:
+        return configured
+    unknown = sorted(set(raw_models) - set(configured))
+    if unknown:
+        msg = f"Unknown model presets requested: {', '.join(unknown)}"
+        raise ValueError(msg)
+    return tuple(raw_models)
+
+
+def _prepare_assets_command(args: Namespace, logger: logging.Logger) -> int:
+    cache_dir = _repo_path(args.cache_dir)
+    configure_logging(args.log_level, log_path=cache_dir / "logs" / "prepare-assets.log")
+    command_logger = bind_logger(logger, command=args.command, cache_dir=cache_dir)
+    requested_models = _resolve_requested_models(args.models)
+    command_logger.info(
+        "Preparing local assets", extra={"requested_models": requested_models or "none"}
+    )
+    normalized_train = normalize_training_data(args.train_source, cache_dir)
+    normalized_eval = normalize_all_benchmarks(cache_dir, TASKS, limit=args.limit)
+    sys.stdout.write(f"training={normalized_train}\n")
+    for task, path in normalized_eval.items():
+        sys.stdout.write(f"{task}={path}\n")
+    for model_name in requested_models:
+        spec = build_experiment(
+            model_name=model_name,
+            method="dora",
+            scope="full",
+            runtime_name="official",
+        )
+        snapshot_dir = prefetch_model_to_hf_cache(
+            model_name=model_name,
+            model_id=spec.model.model_id,
+        )
+        sys.stdout.write(f"{model_name}={snapshot_dir}\n")
+    command_logger.info(
+        "Prepared local assets",
+        extra={"task_count": len(normalized_eval), "model_count": len(requested_models)},
+    )
     return 0
 
 
@@ -170,6 +227,7 @@ def _smoke_test_command(args: Namespace, logger: logging.Logger) -> int:
 def _dispatch(args: Namespace, logger: logging.Logger) -> int:
     handlers = {
         "prepare-data": _prepare_data_command,
+        "prepare-assets": _prepare_assets_command,
         "train": _train_command,
         "evaluate": _evaluate_command,
         "summarize": _summarize_command,

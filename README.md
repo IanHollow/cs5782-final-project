@@ -11,7 +11,7 @@ The target reproduction is the paper's commonsense reasoning result: DoRA should
 - `code/src/dora_repro/`: typed Python package for auth, configs, data prep, adapters, training, evaluation, and summarization
 - `code/tests/`: unit and smoke tests
 - `code/configs/`: TOML presets for models, runtimes, and default experiments
-- `data/`: local raw data plus a cache area for normalized Hugging Face datasets
+- `data/`: local training data, benchmark JSONL files, model snapshots, and a cache area
 - `results/`, `poster/`, `report/`: course deliverables and experiment outputs
 - `notebooks/`: Colab-friendly quickstart assets
 
@@ -41,7 +41,7 @@ Local setup:
 uv sync --all-groups
 uvx prek validate-config prek.toml
 uvx prek install --overwrite
-uv run python -m dora_repro.cli prepare-data --cache-dir data/cache
+uv run python -m dora_repro.cli prepare-assets --models tiny_debug --cache-dir data/cache
 ```
 
 Git hooks are managed with `prek` (`prek.toml`). The setup above installs both `pre-commit`
@@ -89,6 +89,17 @@ Google Colab:
 - Run `notebooks/bootstrap_colab.sh` after cloning the repo.
 - Set `HF_TOKEN` or `HF_TOKEN_PATH` for gated Llama access.
 - Use the `colab_t4` or `colab_l4_a100` runtime preset depending on the GPU.
+- To avoid spending GPU time on downloads, first run `prepare-assets` on a CPU runtime while the repo is mounted on Google Drive. Benchmarks are stored under `data/benchmarks/`, and model weights are prefetched into the standard Hugging Face cache controlled by `HF_HOME` / `HF_HUB_CACHE`.
+
+CPU-first asset preparation example:
+
+```bash
+uv run python -m dora_repro.cli prepare-assets \
+  --models llama2_7b llama3_8b tiny_debug \
+  --cache-dir data/cache
+```
+
+After that, reconnect to a GPU runtime and train normally. Training and evaluation will use the prefetched Hugging Face cache and the local benchmark files in `data/benchmarks/`.
 
 ## Results / Insights
 
@@ -103,7 +114,7 @@ Aggregate summaries are written to `results/summary/summary.csv` and `results/su
 
 ## Conclusion
 
-The repo is organized around a faithful but maintainable reproduction path: modern PEFT DoRA adapters, config-driven experiment presets, download-on-demand datasets, Colab-aware runtimes, and strict repository checks. That makes it usable both as a class deliverable and as a clean baseline for follow-up ablations.
+The repo is organized around a faithful but maintainable reproduction path: modern PEFT DoRA adapters, config-driven experiment presets, local-first datasets and model snapshots, Colab-aware runtimes, and strict repository checks. That makes it usable both as a class deliverable and as a clean baseline for follow-up ablations.
 
 ## References
 

@@ -49,6 +49,12 @@ def default_cache_dir(root: Path | None = None) -> Path:
     return base / "data" / "cache"
 
 
+def benchmark_data_dir(root: Path | None = None) -> Path:
+    """Return the local directory used for normalized benchmark JSONL files."""
+    base = repo_root() if root is None else root
+    return base / "data" / "benchmarks"
+
+
 def resolve_training_source(train_source: str, cache_dir: Path) -> Path:
     """Resolve the commonsense training data from auto/path/URL inputs."""
     if train_source == "auto":
@@ -272,6 +278,23 @@ def normalize_benchmark_task(task: str, limit: int | None = None) -> list[EvalSa
     if task not in TASKS:
         msg = f"Unsupported benchmark task: {task}"
         raise ValueError(msg)
+    local_jsonl = benchmark_data_dir() / f"{task}.jsonl"
+    if local_jsonl.is_file():
+        rows = read_jsonl(local_jsonl)
+        samples = [
+            EvalSample(
+                id=str(row["id"]),
+                task=str(row["task"]),
+                instruction=str(row["instruction"]),
+                choices=tuple(str(choice) for choice in row["choices"]),
+                label=str(row["label"]),
+            )
+            for row in rows[:limit]
+        ]
+        bind_logger(logger, task=task, path=local_jsonl, sample_count=len(samples)).info(
+            "Loaded local benchmark task"
+        )
+        return samples
     dataset_id, subset, split = benchmark_specs()[task]
     task_logger = bind_logger(
         logger,
@@ -317,9 +340,10 @@ def normalize_all_benchmarks(
     output_paths: dict[str, Path] = {}
     for task in task_names:
         samples = normalize_benchmark_task(task, limit=limit)
-        output_path = resolved_cache / "normalized" / "eval" / f"{task}.jsonl"
+        output_path = benchmark_data_dir() / f"{task}.jsonl"
         output_paths[task] = write_jsonl([asdict(sample) for sample in samples], output_path)
         bind_logger(logger, task=task, output_path=output_path).info("Wrote benchmark JSONL")
+    bind_logger(logger, cache_dir=resolved_cache).debug("Prepared benchmarks with cache directory")
     return output_paths
 
 

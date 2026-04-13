@@ -70,6 +70,8 @@ if TYPE_CHECKING:
 def test_normalize_benchmark_task(
     monkeypatch: pytest.MonkeyPatch, task: str, row: dict[str, Any], expected_label: str
 ) -> None:
+    monkeypatch.setattr(data, "benchmark_data_dir", lambda: data.repo_root() / "missing-benchmarks")
+
     def fake_load_dataset(
         dataset_id: str, name: str | None = None, split: str | None = None
     ) -> Dataset:
@@ -91,3 +93,27 @@ def test_normalize_training_data_uses_local_file(tmp_path: Path) -> None:
     output_path = data.normalize_training_data(str(source), tmp_path / "cache")
     contents = output_path.read_text(encoding="utf-8")
     assert '"instruction": "Q"' in contents
+
+
+def test_normalize_benchmark_task_prefers_local_jsonl(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark_dir = tmp_path / "benchmarks"
+    benchmark_dir.mkdir()
+    (benchmark_dir / "boolq.jsonl").write_text(
+        (
+            '{"choices": ["true", "false"], "id": "1", "instruction": "Local prompt", '
+            '"label": "true", "task": "boolq"}\n'
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(data, "benchmark_data_dir", lambda: benchmark_dir)
+
+    def fail_load_dataset(*args: object, **kwargs: object) -> Dataset:
+        msg = f"unexpected remote dataset load: {args} {kwargs}"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(data, "load_dataset", fail_load_dataset)
+    normalized = data.normalize_benchmark_task("boolq")
+    assert len(normalized) == 1
+    assert normalized[0].instruction == "Local prompt"

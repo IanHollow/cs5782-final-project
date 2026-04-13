@@ -20,3 +20,4 @@ def test_smoke_test_command_writes_output(tmp_path: Path) -> None:
 def test_prepare_data_parser_help() -> None:
     help_text = build_parser().format_help()
     assert "prepare-data" in help_text
+    assert "prepare-assets" in help_text

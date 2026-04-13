@@ -652,6 +652,10 @@ $RECYCLE.BIN/
 # Log files created by default by the nohup command
 nohup.out
 
+# Project data scratch space and local model artifacts
+data/cache/
+data/models/
+
 
 ### Nix
 # Ignore build outputs from performing a nix-build or `nix build` command
@@ -751,4 +755,3 @@ http-client.private.env.json
 
 # Github Copilot persisted session migrations, see: https://github.com/microsoft/copilot-intellij-feedback/issues/712#issuecomment-3322062215
 .idea/**/copilot.data.migration.*.xml
-
