@@ -103,7 +103,7 @@ entry = "uv run ty check code/src"
 language = "system"
 always_run = true
 pass_filenames = false
-stages = ["pre-push", "manual"]
+stages = ["pre-commit"]
 
 [[repos.hooks]]
 id = "pytest"
