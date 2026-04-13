@@ -181,5 +181,7 @@ def evaluate_run(run_dir: Path, task_names: tuple[str, ...] | None = None) -> di
         "macro_average": macro_average(per_task_accuracy),
     }
     write_json(run_dir / "metrics.json", metrics)
-    eval_logger.info("Wrote evaluation metrics", extra={"macro_average": f"{metrics['macro_average']:.4f}"})
+    eval_logger.info(
+        "Wrote evaluation metrics", extra={"macro_average": f"{metrics['macro_average']:.4f}"}
+    )
     return metrics

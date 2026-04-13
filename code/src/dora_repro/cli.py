@@ -142,7 +142,9 @@ def _summarize_command(args: Namespace, logger: logging.Logger) -> int:
     command_logger = bind_logger(logger, command=args.command, results_dir=results_dir)
     command_logger.info("Summarizing run metrics")
     csv_path, figure_path = summarize_runs(results_dir, output_dir)
-    command_logger.info("Summary completed", extra={"csv_path": csv_path, "figure_path": figure_path})
+    command_logger.info(
+        "Summary completed", extra={"csv_path": csv_path, "figure_path": figure_path}
+    )
     sys.stdout.write(f"{csv_path}\n")
     if figure_path is not None:
         sys.stdout.write(f"{figure_path}\n")

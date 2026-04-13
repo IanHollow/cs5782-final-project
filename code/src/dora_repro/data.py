@@ -97,7 +97,9 @@ def normalize_training_data(
     source = resolve_training_source(train_source, resolved_cache)
     output_path = resolved_cache / "normalized" / "train" / "commonsense_170k.jsonl"
     records = [asdict(sample) for sample in load_training_samples(source)]
-    bind_logger(logger, records=len(records), output_path=output_path).info("Normalized training data")
+    bind_logger(logger, records=len(records), output_path=output_path).info(
+        "Normalized training data"
+    )
     return write_jsonl(records, output_path)
 
 

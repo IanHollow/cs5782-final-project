@@ -78,7 +78,9 @@ def load_model_and_tokenizer(
             bnb_4bit_compute_dtype=_torch_dtype(spec.runtime.bnb_4bit_compute_dtype),
             bnb_4bit_use_double_quant=spec.runtime.bnb_4bit_use_double_quant,
         )
-    contextual_logger.info("Loading base model and tokenizer", extra={"model_id": spec.model.model_id})
+    contextual_logger.info(
+        "Loading base model and tokenizer", extra={"model_id": spec.model.model_id}
+    )
     model = cast(
         "PreTrainedModel",
         AutoModelForCausalLM.from_pretrained(
@@ -188,7 +190,9 @@ def run_training(
     )
     ensure_dir(output_dir)
     checkpoints_dir = ensure_dir(output_dir / "checkpoints")
-    run_logger.info("Writing run snapshot", extra={"snapshot_path": output_dir / "config.snapshot.toml"})
+    run_logger.info(
+        "Writing run snapshot", extra={"snapshot_path": output_dir / "config.snapshot.toml"}
+    )
     write_snapshot(output_dir / "config.snapshot.toml", spec)
     model, tokenizer = load_model_and_tokenizer(spec)
     train_dataset, eval_dataset = _prepare_dataset(spec, tokenizer)
