@@ -23,3 +23,16 @@ def test_build_experiment_uses_scope_modules() -> None:
     )
     assert spec.adapter.target_modules == TARGET_MODULES["attention_only"]
     assert spec.task_names[0] == "boolq"
+
+
+def test_build_debug_quick_experiment_uses_small_training_subset() -> None:
+    spec = build_experiment(
+        model_name="tiny_debug",
+        method="dora",
+        scope="attention_only",
+        runtime_name="official",
+        experiment_name="debug_quick",
+    )
+    assert spec.train_data_path.name == "commonsense_15k.json"
+    assert spec.max_train_samples == 512
+    assert spec.num_epochs == 1

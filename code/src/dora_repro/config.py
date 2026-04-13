@@ -83,6 +83,7 @@ class ExperimentSpec:
     runtime: RuntimePreset
     train_data_path: Path
     task_names: tuple[str, ...]
+    max_train_samples: int | None = None
     val_set_size: int = 120
     num_epochs: int = 3
     save_steps: int = 80
@@ -188,6 +189,11 @@ def build_experiment(
             else repo_root() / str(defaults.get("train_data_path", "data/commonsense_170k.json"))
         ),
         task_names=task_names,
+        max_train_samples=(
+            None
+            if defaults.get("max_train_samples") is None
+            else int(defaults["max_train_samples"])
+        ),
         val_set_size=int(defaults.get("val_set_size", 120)),
         num_epochs=int(defaults.get("num_epochs", 3)),
         save_steps=int(defaults.get("save_steps", 80)),

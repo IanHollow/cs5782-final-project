@@ -51,7 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     train.add_argument("--runtime", default="official")
     train.add_argument("--experiment", default="default")
-    train.add_argument("--train-data-path", default="data/commonsense_170k.json")
+    train.add_argument("--train-data-path", default=None)
     train.add_argument("--output-dir", default="results/runs")
     train.add_argument("--run-name", default=None)
     train.add_argument("--resume-from-checkpoint", default=None)
@@ -102,13 +102,18 @@ def _train_command(args: Namespace, logger: logging.Logger) -> int:
         runtime=args.runtime,
     )
     command_logger.info("Building experiment spec")
+    if args.model == "tiny_debug" and args.experiment == "default" and args.train_data_path is None:
+        command_logger.warning(
+            "tiny_debug with the default experiment still uses the full paper-scale "
+            "training set; use --experiment debug_quick for a fast Colab sanity run"
+        )
     spec = build_experiment(
         model_name=args.model,
         method=args.method,
         scope=args.scope,
         runtime_name=args.runtime,
         experiment_name=args.experiment,
-        train_data_path=_repo_path(args.train_data_path),
+        train_data_path=_repo_path(args.train_data_path) if args.train_data_path else None,
     )
     resume_from_checkpoint = (
         _repo_path(args.resume_from_checkpoint) if args.resume_from_checkpoint else None

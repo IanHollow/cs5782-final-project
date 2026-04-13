@@ -57,6 +57,24 @@ def _torch_dtype(name: str) -> torch.dtype:
     return mapping[name]
 
 
+def _quantized_device_map() -> dict[str, int] | None:
+    """Place quantized single-GPU training runs on the active CUDA device."""
+    if not torch.cuda.is_available():
+        return None
+    return {"": torch.cuda.current_device()}
+
+
+def _cuda_bf16_supported() -> bool:
+    """Detect true hardware bf16 support and avoid emulation paths."""
+    if not torch.cuda.is_available():
+        return False
+    try:
+        return bool(torch.cuda.is_bf16_supported(including_emulation=False))
+    except TypeError:
+        major, _minor = torch.cuda.get_device_capability()
+        return major >= 8
+
+
 def load_model_and_tokenizer(
     spec: ExperimentSpec,
 ) -> tuple[PreTrainedModel, PreTrainedTokenizerBase]:
@@ -78,13 +96,17 @@ def load_model_and_tokenizer(
             bnb_4bit_compute_dtype=_torch_dtype(spec.runtime.bnb_4bit_compute_dtype),
             bnb_4bit_use_double_quant=spec.runtime.bnb_4bit_use_double_quant,
         )
+    device_map = _quantized_device_map() if spec.runtime.use_4bit else None
     contextual_logger.info(
-        "Loading base model and tokenizer", extra={"model_id": spec.model.model_id}
+        "Loading base model and tokenizer",
+        extra={"device_map": device_map, "model_id": spec.model.model_id},
     )
     model = cast(
         "PreTrainedModel",
         AutoModelForCausalLM.from_pretrained(
             spec.model.model_id,
+            device_map=device_map,
+            low_cpu_mem_usage=spec.runtime.use_4bit,
             token=token,
             trust_remote_code=spec.model.trust_remote_code,
             quantization_config=quantization_config,
@@ -155,6 +177,8 @@ def _prepare_dataset(
     spec: ExperimentSpec, tokenizer: PreTrainedTokenizerBase
 ) -> tuple[Dataset, Dataset | None]:
     samples = _read_training_json(spec.train_data_path)
+    if spec.max_train_samples is not None:
+        samples = samples[: spec.max_train_samples]
     records = [
         _tokenize_example(
             sample=sample,
@@ -174,7 +198,8 @@ def _prepare_dataset(
 def _half_precision_flags() -> tuple[bool, bool]:
     if not torch.cuda.is_available():
         return False, False
-    return torch.cuda.is_bf16_supported(), not torch.cuda.is_bf16_supported()
+    bf16 = _cuda_bf16_supported()
+    return bf16, not bf16
 
 
 def _dataloader_pin_memory() -> bool:
