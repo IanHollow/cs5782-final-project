@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import torch
 from peft import PeftModel
+from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from dora_repro.auth import resolve_hf_token
@@ -56,6 +57,20 @@ def _device() -> str:
     return "cpu"
 
 
+def _evaluation_batch_size(spec: ExperimentSpec) -> int:
+    """Choose a conservative evaluation batch size for the active device."""
+    device = _device()
+    if device == "cuda":
+        return max(1, spec.runtime.per_device_batch_size * 4)
+    if device == "mps":
+        return max(1, spec.runtime.per_device_batch_size * 2)
+    return 1
+
+
+def _batched[T](items: list[T], batch_size: int) -> list[list[T]]:
+    return [items[index : index + batch_size] for index in range(0, len(items), batch_size)]
+
+
 def load_trained_model(
     run_dir: Path, spec: ExperimentSpec
 ) -> tuple[PreTrainedModel, PreTrainedTokenizerBase]:
@@ -90,6 +105,8 @@ def load_trained_model(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
+    model.generation_config.eos_token_id = tokenizer.eos_token_id
     device = torch.device(_device())
     moved_model = cast("Any", model).to(device)
     eval_logger.info("Loaded evaluation model", extra={"device": device.type})
@@ -101,15 +118,17 @@ def _generate_predictions(
     tokenizer: PreTrainedTokenizerBase,
     samples: list[EvalSample],
     max_new_tokens: int,
+    batch_size: int,
 ) -> list[dict[str, object]]:
     results: list[dict[str, object]] = []
     device_name = _device()
-    for sample in samples:
+    for batch in tqdm(_batched(samples, batch_size), desc="Evaluating", unit="batch"):
         encoded = tokenizer(
-            sample.instruction,
+            [sample.instruction for sample in batch],
             return_tensors="pt",
             truncation=True,
             max_length=tokenizer.model_max_length,
+            padding=True,
         )
         encoded = {key: value.to(device_name) for key, value in encoded.items()}
         with torch.inference_mode():
@@ -118,25 +137,24 @@ def _generate_predictions(
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
                 num_beams=1,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id,
             )
         generated_ids = output[:, encoded["input_ids"].shape[1] :]
-        decoded_output = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-        decoded = (
-            decoded_output[0].strip()
-            if isinstance(decoded_output, list)
-            else decoded_output.strip()
-        )
-        prediction = extract_prediction(sample.task, decoded)
-        results.append(
-            {
-                "id": sample.id,
-                "task": sample.task,
-                "label": sample.label,
-                "prediction": prediction,
-                "correct": prediction == sample.label,
-                "generated_text": decoded,
-            },
-        )
+        decoded_batch = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+        for sample, decoded in zip(batch, decoded_batch, strict=True):
+            stripped = decoded.strip()
+            prediction = extract_prediction(sample.task, stripped)
+            results.append(
+                {
+                    "id": sample.id,
+                    "task": sample.task,
+                    "label": sample.label,
+                    "prediction": prediction,
+                    "correct": prediction == sample.label,
+                    "generated_text": stripped,
+                },
+            )
     return results
 
 
@@ -153,6 +171,8 @@ def evaluate_run(run_dir: Path, task_names: tuple[str, ...] | None = None) -> di
     )
     eval_logger.info("Starting evaluation", extra={"task_count": len(requested_tasks)})
     model, tokenizer = load_trained_model(run_dir, spec)
+    batch_size = _evaluation_batch_size(spec)
+    eval_logger.info("Resolved evaluation batch size", extra={"batch_size": batch_size})
     per_task_accuracy: dict[str, float] = {}
 
     for task in requested_tasks:
@@ -160,7 +180,13 @@ def evaluate_run(run_dir: Path, task_names: tuple[str, ...] | None = None) -> di
         task_logger = bind_logger(eval_logger.logger, **eval_context, task=task)
         samples = normalize_benchmark_task(task)
         task_logger.info("Loaded evaluation task", extra={"sample_count": len(samples)})
-        predictions = _generate_predictions(model, tokenizer, samples, spec.max_new_tokens)
+        predictions = _generate_predictions(
+            model,
+            tokenizer,
+            samples,
+            spec.max_new_tokens,
+            batch_size,
+        )
         output_path = run_dir / "predictions" / f"{task}.jsonl"
         write_jsonl(output_path, predictions)
         correct = sum(1 for item in predictions if bool(item["correct"]))
