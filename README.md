@@ -1,29 +1,102 @@
-### 1. Introduction
-• Purpose of this Git repo (mention how this is a project that attempts to re-implement your paper of
-   choice)<br>
-• Introduce the paper chosen and its main contribution.
-### 2. Chosen Result
-• Identify the specific result you aimed to reproduce and its significance in the context of the paper’s
-   main contribution(s). <br>
-• Include the relevant figure, table, or equation reference from the original paper.
-### 3. GitHub Contents
-• Make a brief note about the content structure of your project.
-### 4. Re-implementation Details
-• Describe your approach to re-implementation or experimentation. <br>
-• Include key details about models, datasets, tools, and evaluation metrics. <br>
-• Mention any challenges or modifications made to the original approach.
-### 5. Reproduction Steps As meta as this section is, it essentially documents steps someone would need to follow to implement your GitHub repo in a local environment.
-• Describe ”how someone using your GitHub can re-implement your re-implementation?” <br>
-• Provide instructions for running your code, including any dependencies, required libraries, and command-line arguments. <br>
-• Specify the computational resources (e.g., GPU) needed to reproduce your results.
-### 6. Results/Insights
-• Present your re-implementation results as a comparison to the original paper’s findings. Describes  ”what can someone expect as the end-result of using your GitHub repo?”
-### Conclusion
-• Summarize the key takeaways from your re-implementation effort and the lessons learned.
-### 8. References
-   • Include a list of references, including the original paper and any additional resources used in your
-   re-implementation.
-### 9. Acknowledgements
-   • Recognition goes a long way in setting up the context of your work. Your acknowledgements also act
-   as an indirect validation about the quality of the work. For e.g., having done this project as part of
-   coursework is a sign that the work was potentially peer-reviewed or graded - i.e. added authenticity
+# DoRA Reimplementation for Commonsense Reasoning
+
+This repository is a course-quality reimplementation of DoRA, the weight-decomposed low-rank adaptation method from the ICML 2024 oral paper *DoRA: Weight-Decomposed Low-Rank Adaptation*. The project focuses on reproducing the commonsense reasoning setup and comparing LoRA vs DoRA across full, attention-only, and MLP-only adaptation scopes.
+
+## Chosen Result
+
+The target reproduction is the paper's commonsense reasoning result: DoRA should outperform matched LoRA baselines on average across BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, and OpenBookQA. The repo keeps that benchmark suite intact and adds clean support for the project's attention-only and MLP-only ablations.
+
+## GitHub Contents
+
+- `code/src/dora_repro/`: typed Python package for auth, configs, data prep, adapters, training, evaluation, and summarization
+- `code/tests/`: unit and smoke tests
+- `code/configs/`: TOML presets for models, runtimes, and default experiments
+- `data/`: local raw data plus a cache area for normalized Hugging Face datasets
+- `results/`, `poster/`, `report/`: course deliverables and experiment outputs
+- `notebooks/`: Colab-friendly quickstart assets
+
+## Reimplementation Details
+
+The implementation uses modern Hugging Face libraries instead of vendoring NVlabs’ old PEFT fork:
+
+- `transformers` + `peft` for LoRA/DoRA adapters
+- `datasets` for the 8 evaluation benchmarks
+- `uv` for environment and dependency management
+- `ruff`, `ty`, and `pytest` for repository quality gates
+
+Default experiment preset:
+
+- Base model: `meta-llama/Llama-2-7b-hf`
+- Methods: `lora`, `dora`
+- Scopes: `full`, `attention_only`, `mlp_only`
+- Hyperparameters: 3 epochs, cutoff 256, effective batch size 16, checkpointing every 80 steps
+
+Runtime presets are separated from method presets so the same experiment can run in a paper-faithful mode or a lower-memory Colab mode.
+
+## Reproduction Steps
+
+Local setup:
+
+```bash
+uv sync --all-groups
+uv run python -m dora_repro.cli prepare-data --cache-dir data/cache
+```
+
+Train one run:
+
+```bash
+uv run python -m dora_repro.cli train \
+  --model llama2_7b \
+  --method dora \
+  --scope full \
+  --runtime colab_t4 \
+  --experiment paper_llama2_7b
+```
+
+Evaluate and summarize:
+
+```bash
+uv run python -m dora_repro.cli evaluate --run-dir results/runs/<run_name>
+uv run python -m dora_repro.cli summarize --results-dir results/runs --output-dir results/summary
+```
+
+Quality checks:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+uv run ty check code/src
+uv run pytest
+```
+
+Google Colab:
+
+- Run `notebooks/bootstrap_colab.sh` after cloning the repo.
+- Set `HF_TOKEN` or `HF_TOKEN_PATH` for gated Llama access.
+- Use the `colab_t4` or `colab_l4_a100` runtime preset depending on the GPU.
+
+## Results / Insights
+
+Each experiment run writes:
+
+- `results/runs/<run_name>/config.snapshot.toml`
+- `results/runs/<run_name>/checkpoints/`
+- `results/runs/<run_name>/predictions/<task>.jsonl`
+- `results/runs/<run_name>/metrics.json`
+
+Aggregate summaries are written to `results/summary/summary.csv` and `results/summary/macro_average.png`.
+
+## Conclusion
+
+The repo is organized around a faithful but maintainable reproduction path: modern PEFT DoRA adapters, config-driven experiment presets, download-on-demand datasets, Colab-aware runtimes, and strict repository checks. That makes it usable both as a class deliverable and as a clean baseline for follow-up ablations.
+
+## References
+
+1. Liu et al. *DoRA: Weight-Decomposed Low-Rank Adaptation*. ICML 2024 Oral.
+2. [NVlabs/DoRA](https://github.com/NVlabs/DoRA)
+3. [Hugging Face PEFT documentation](https://huggingface.co/docs/peft)
+4. [Hugging Face Transformers documentation](https://huggingface.co/docs/transformers)
+
+## Acknowledgements
+
+This repository was prepared for the CS 5782 / CS 4782 Intro to Deep Learning final project, Spring 2026.

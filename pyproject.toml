@@ -1,0 +1,158 @@
+[project]
+name = "dora-repro"
+version = "0.1.0"
+description = "DoRA vs LoRA re-implementation."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+authors = [
+    { name = "Ian Holloway", email = "imh39@cornell.edu" },
+    { name = "Younghyun Jung", email = "yj582@cornell.edu" },
+    { name = "Swathi Selvam", email = "ss4522@cornell.edu" },
+    { name = "Shashwat Modi", email = "sm3225@cornell.edu" },
+]
+dependencies = [
+    "accelerate>=1.13.0",
+    "datasets>=4.8.4",
+    "httpx>=0.28.1",
+    "json-repair>=0.59.2",
+    "matplotlib>=3.10.8",
+    "networkx>=3.6.1",
+    "numpy>=2.4.4",
+    "orjson>=3.11.8",
+    "pandas>=3.0.2",
+    "peft>=0.18.1",
+    "pydantic>=2.12.5",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "sentence-transformers>=5.4.0",
+    "tomli-w>=1.2.0",
+    "torch>=2.11.0",
+    "transformers>=5.5.3",
+    "typer>=0.24.1",
+]
+
+[project.optional-dependencies]
+gpu = ["bitsandbytes>=0.49.2"]
+
+[project.scripts]
+dora-repro = "dora_repro.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.6"]
+build-backend = "uv_build"
+
+[dependency-groups]
+notebook = ["jupyter>=1.1.1", "notebook>=7.5.5"]
+lint = ["ruff>=0.15.10", "ty>=0.0.29"]
+test = ["pytest>=9.0.3", "pytest-cov>=7.1.0"]
+
+[tool.uv]
+default-groups = ["lint", "test"]
+
+[tool.uv.build-backend]
+module-root = "code/src"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+fix = true
+preview = true
+src = ["code/src", "code/tests"]
+
+[tool.ruff.lint]
+preview = true
+future-annotations = true
+select = ["ALL"]
+ignore = [
+    # Ruff Formatter Ignores
+    "W191",
+    "E111",
+    "E114",
+    "E117",
+    "D206",
+    "D300",
+    "Q000",
+    "Q001",
+    "Q002",
+    "Q003",
+    "COM812",
+    "COM819",
+    "ISC002",
+    "E501",
+
+    # Common ignores
+    "PLR0913", # Too many arguments
+    "PLR0917", # Too many positional arguments
+    "T201",    # print allowed
+    "PLR2004", # Magic value in comparison
+
+    # Easier TODOs
+    "FIX002",
+    "TD003",
+
+    # Copyright
+    "CPY",
+
+    # Boolean in function
+    "FBT",
+
+    # Documentation
+    "D203", # 1 blank line before class docstring
+    "D213", # multi-line-summary-first-line
+    "D",
+    "DOC",
+]
+unfixable = [
+    "F841", # Don't fix unused variable
+    "T201", # Don't fix print statements
+]
+
+[tool.ruff.lint.flake8-bandit]
+check-typed-exception = true
+
+[tool.ruff.lint.flake8-builtins]
+strict-checking = true
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+preview = true
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-type-checking]
+strict = true
+
+[tool.ruff.lint.per-file-ignores]
+"code/tests/**/*.py" = [
+    "S101",
+    "ARG",
+    "PLR2004",
+    "S311",
+    "SLF001",
+    "INP001",
+    "D",
+    "ANN",
+    "T201",
+]
+
+
+[tool.pytest.ini_options]
+pythonpath = ["code/src"]
+testpaths = ["code/tests"]
+addopts = ["--cov=dora_repro", "--cov-report=term-missing"]
+
+
+[tool.coverage.run]
+branch = true
+source = ["code/src/dora_repro"]
+
+[tool.ty.environment]
+python-version = "3.12"
+python-platform = "all"
+
+[tool.ty.terminal]
+output-format = "concise"
+error-on-warning = true
