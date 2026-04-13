@@ -33,7 +33,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpu = ["bitsandbytes>=0.49.2"]
+gpu = [
+    "bitsandbytes>=0.49.2",
+    "triton>=3.6.0",
+]
 
 [project.scripts]
 dora-repro = "dora_repro.cli:main"
