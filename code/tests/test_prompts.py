@@ -1,4 +1,11 @@
-from dora_repro.prompts import TrainingSample, extract_prediction, format_training_prompt
+from dora_repro.prompts import (
+    EvalSample,
+    TrainingSample,
+    extract_prediction,
+    format_eval_prompt,
+    format_training_prompt,
+    format_user_prompt,
+)
 
 
 def test_format_training_prompt_contains_sections() -> None:
@@ -8,6 +15,21 @@ def test_format_training_prompt_contains_sections() -> None:
     assert "### Instruction:" in prompt
     assert "### Input:" in prompt
     assert "### Response:" in prompt
+
+
+def test_format_user_and_eval_prompts_use_shared_wrapper() -> None:
+    user_prompt = format_user_prompt(
+        TrainingSample(instruction="Solve it", input="", output="4"),
+    )
+    eval_prompt = format_eval_prompt(
+        EvalSample(
+            id="1", task="boolq", instruction="Answer true or false.", choices=(), label="true"
+        ),
+    )
+    assert user_prompt.endswith("### Response:\n")
+    assert "### Instruction:\nSolve it" in user_prompt
+    assert eval_prompt.endswith("### Response:\n")
+    assert "### Instruction:\nAnswer true or false." in eval_prompt
 
 
 def test_extract_prediction_for_supported_tasks() -> None:

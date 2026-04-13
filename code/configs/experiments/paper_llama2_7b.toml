@@ -17,6 +17,6 @@ val_set_size = 120
 save_steps = 80
 eval_steps = 80
 weight_decay = 0.0
-train_on_inputs = true
+train_on_inputs = false
 seed = 42
 max_new_tokens = 8

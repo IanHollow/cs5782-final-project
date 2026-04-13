@@ -89,7 +89,7 @@ class ExperimentSpec:
     save_steps: int = 80
     eval_steps: int = 80
     weight_decay: float = 0.0
-    train_on_inputs: bool = True
+    train_on_inputs: bool = False
     seed: int = 42
     max_new_tokens: int = 8
 
@@ -199,7 +199,7 @@ def build_experiment(
         save_steps=int(defaults.get("save_steps", 80)),
         eval_steps=int(defaults.get("eval_steps", 80)),
         weight_decay=float(defaults.get("weight_decay", 0.0)),
-        train_on_inputs=bool(defaults.get("train_on_inputs", True)),
+        train_on_inputs=bool(defaults.get("train_on_inputs", False)),
         seed=int(defaults.get("seed", 42)),
         max_new_tokens=int(defaults.get("max_new_tokens", 8)),
     )

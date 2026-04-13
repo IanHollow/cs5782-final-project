@@ -26,40 +26,37 @@ class TrainingSample:
     output: str
 
 
-def format_training_prompt(sample: TrainingSample) -> str:
-    """Return the Alpaca-style supervised prompt."""
-    if sample.input:
+def _format_prompt_prefix(instruction: str, input_text: str = "") -> str:
+    """Return the shared instruction prompt prefix used for train and eval."""
+    if input_text:
         return (
             "Below is an instruction that describes a task, paired with an input that provides "
             "further context. Write a response that appropriately completes the request.\n\n"
-            f"### Instruction:\n{sample.instruction}\n\n"
-            f"### Input:\n{sample.input}\n\n"
-            f"### Response:\n{sample.output}"
-        )
-    return (
-        "Below is an instruction that describes a task. Write a response that appropriately "
-        "completes the request.\n\n"
-        f"### Instruction:\n{sample.instruction}\n\n"
-        f"### Response:\n{sample.output}"
-    )
-
-
-def format_user_prompt(sample: TrainingSample) -> str:
-    """Return the prompt prefix without the gold response."""
-    if sample.input:
-        return (
-            "Below is an instruction that describes a task, paired with an input that provides "
-            "further context. Write a response that appropriately completes the request.\n\n"
-            f"### Instruction:\n{sample.instruction}\n\n"
-            f"### Input:\n{sample.input}\n\n"
+            f"### Instruction:\n{instruction}\n\n"
+            f"### Input:\n{input_text}\n\n"
             "### Response:\n"
         )
     return (
         "Below is an instruction that describes a task. Write a response that appropriately "
         "completes the request.\n\n"
-        f"### Instruction:\n{sample.instruction}\n\n"
+        f"### Instruction:\n{instruction}\n\n"
         "### Response:\n"
     )
+
+
+def format_training_prompt(sample: TrainingSample) -> str:
+    """Return the Alpaca-style supervised prompt."""
+    return _format_prompt_prefix(sample.instruction, sample.input) + sample.output
+
+
+def format_user_prompt(sample: TrainingSample) -> str:
+    """Return the prompt prefix without the gold response."""
+    return _format_prompt_prefix(sample.instruction, sample.input)
+
+
+def format_eval_prompt(sample: EvalSample) -> str:
+    """Wrap evaluation instructions in the same prompt template used for SFT."""
+    return _format_prompt_prefix(sample.instruction)
 
 
 def extract_prediction(task: str, generated_text: str) -> str:

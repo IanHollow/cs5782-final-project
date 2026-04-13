@@ -15,6 +15,10 @@ class _FakeTokenizer:
     pad_token_id = 7
     eos_token_id = 9
     model_max_length = 32
+    seen_texts: list[str]
+
+    def __init__(self) -> None:
+        self.seen_texts = []
 
     def __call__(
         self,
@@ -27,6 +31,7 @@ class _FakeTokenizer:
     ) -> dict[str, torch.Tensor]:
         del return_tensors, truncation, max_length, padding
         texts = [text] if isinstance(text, str) else text
+        self.seen_texts.extend(texts)
         batch = len(texts)
         return {
             "input_ids": torch.tensor([[1, 2, 3]] * batch),
@@ -73,6 +78,8 @@ def test_generate_predictions_batches_and_sets_generation_token_ids(monkeypatch)
     assert model.last_generate_kwargs is not None
     assert model.last_generate_kwargs["pad_token_id"] == tokenizer.pad_token_id
     assert model.last_generate_kwargs["eos_token_id"] == tokenizer.eos_token_id
+    assert tokenizer.seen_texts[0].endswith("### Response:\n")
+    assert "### Instruction:\nQ1" in tokenizer.seen_texts[0]
 
 
 def test_evaluation_batch_size_scales_with_runtime_and_device(monkeypatch) -> None:

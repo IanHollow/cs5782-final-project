@@ -23,6 +23,7 @@ def test_build_experiment_uses_scope_modules() -> None:
     )
     assert spec.adapter.target_modules == TARGET_MODULES["attention_only"]
     assert spec.task_names[0] == "boolq"
+    assert spec.train_on_inputs is False
 
 
 def test_build_debug_quick_experiment_uses_small_training_subset() -> None:
@@ -36,3 +37,4 @@ def test_build_debug_quick_experiment_uses_small_training_subset() -> None:
     assert spec.train_data_path.name == "commonsense_15k.json"
     assert spec.max_train_samples == 512
     assert spec.num_epochs == 1
+    assert spec.train_on_inputs is False

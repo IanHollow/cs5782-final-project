@@ -16,7 +16,7 @@ from dora_repro.auth import resolve_hf_token
 from dora_repro.config import build_experiment
 from dora_repro.data import normalize_benchmark_task
 from dora_repro.logging_utils import bind_logger
-from dora_repro.prompts import extract_prediction
+from dora_repro.prompts import extract_prediction, format_eval_prompt
 from dora_repro.results import macro_average, write_json, write_jsonl
 
 if TYPE_CHECKING:
@@ -124,7 +124,7 @@ def _generate_predictions(
     device_name = _device()
     for batch in tqdm(_batched(samples, batch_size), desc="Evaluating", unit="batch"):
         encoded = tokenizer(
-            [sample.instruction for sample in batch],
+            [format_eval_prompt(sample) for sample in batch],
             return_tensors="pt",
             truncation=True,
             max_length=tokenizer.model_max_length,
