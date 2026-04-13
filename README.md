@@ -39,7 +39,22 @@ Local setup:
 
 ```bash
 uv sync --all-groups
+uvx prek validate-config prek.toml
+uvx prek install --overwrite
 uv run python -m dora_repro.cli prepare-data --cache-dir data/cache
+```
+
+Git hooks are managed with `prek` (`prek.toml`). The setup above installs both `pre-commit`
+and `pre-push` hooks:
+
+- `pre-commit`: whitespace/newline/merge/conflict/secret checks + Ruff format/lint on staged Python files
+- `pre-push`: full `ty check code/src` and `pytest`
+
+Run hooks manually at any time:
+
+```bash
+uvx prek run --all-files
+uvx prek run --all-files --hook-stage pre-push
 ```
 
 Train one run:
