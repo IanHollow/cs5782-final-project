@@ -17,7 +17,7 @@ from dora_repro.prompts import EvalSample, TrainingSample
 
 DEFAULT_TRAINING_URL = (
     "https://raw.githubusercontent.com/AGI-Edgerunners/LLM-Adapters/main/"
-    "data/ft-training_set/commonsense_170k.json"
+    "ft-training_set/commonsense_170k.json"
 )
 SCRIPT_BACKED_BENCHMARK_URLS: dict[str, str] = {
     "piqa": "https://storage.googleapis.com/ai2-mosaic/public/physicaliqa/physicaliqa-train-dev.zip",
