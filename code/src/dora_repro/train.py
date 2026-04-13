@@ -177,6 +177,11 @@ def _half_precision_flags() -> tuple[bool, bool]:
     return torch.cuda.is_bf16_supported(), not torch.cuda.is_bf16_supported()
 
 
+def _dataloader_pin_memory() -> bool:
+    """Enable pinned host memory only when CUDA is actually available."""
+    return torch.cuda.is_available()
+
+
 def run_training(
     spec: ExperimentSpec, output_dir: Path, resume_from_checkpoint: Path | None = None
 ) -> Path:
@@ -204,6 +209,8 @@ def run_training(
         },
     )
     bf16, fp16 = _half_precision_flags()
+    pin_memory = _dataloader_pin_memory()
+    run_logger.info("Resolved training runtime flags", extra={"bf16": bf16, "fp16": fp16, "pin_memory": pin_memory})
     trainer = Trainer(
         model=model,
         train_dataset=train_dataset,
@@ -226,6 +233,7 @@ def run_training(
             seed=spec.seed,
             fp16=fp16,
             bf16=bf16,
+            dataloader_pin_memory=pin_memory,
             gradient_checkpointing=spec.runtime.gradient_checkpointing,
             remove_unused_columns=False,
             report_to=[],
