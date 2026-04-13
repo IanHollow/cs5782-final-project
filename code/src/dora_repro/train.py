@@ -210,7 +210,10 @@ def run_training(
     )
     bf16, fp16 = _half_precision_flags()
     pin_memory = _dataloader_pin_memory()
-    run_logger.info("Resolved training runtime flags", extra={"bf16": bf16, "fp16": fp16, "pin_memory": pin_memory})
+    run_logger.info(
+        "Resolved training runtime flags",
+        extra={"bf16": bf16, "fp16": fp16, "pin_memory": pin_memory},
+    )
     trainer = Trainer(
         model=model,
         train_dataset=train_dataset,
