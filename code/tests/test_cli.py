@@ -12,6 +12,9 @@ def test_smoke_test_command_writes_output(tmp_path: Path) -> None:
     exit_code = main(["smoke-test", "--output-dir", str(tmp_path)])
     assert exit_code == 0
     assert (tmp_path / "smoke_test.json").is_file()
+    log_path = tmp_path / "smoke-test.log"
+    assert log_path.is_file()
+    assert "Smoke test completed" in log_path.read_text(encoding="utf-8")
 
 
 def test_prepare_data_parser_help() -> None:

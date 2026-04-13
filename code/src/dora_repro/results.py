@@ -4,15 +4,21 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 from tomli_w import dumps as toml_dumps
 
+from dora_repro.logging_utils import bind_logger
+
 if TYPE_CHECKING:
     from pathlib import Path
 
     from dora_repro.config import ExperimentSpec
+
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_dir(path: Path) -> Path:
@@ -61,6 +67,7 @@ def summarize_runs(results_dir: Path, output_dir: Path) -> tuple[Path, Path | No
     csv_path = output_dir / "summary.csv"
     if not rows:
         csv_path.write_text("run_name,macro_average\n", encoding="utf-8")
+        bind_logger(logger, results_dir=results_dir, csv_path=csv_path).info("No run metrics found")
         return csv_path, None
 
     fieldnames = sorted({key for row in rows for key in row})
@@ -77,4 +84,10 @@ def summarize_runs(results_dir: Path, output_dir: Path) -> tuple[Path, Path | No
     plt.tight_layout()
     plt.savefig(figure_path)
     plt.close()
+    bind_logger(
+        logger,
+        run_count=len(rows),
+        csv_path=csv_path,
+        figure_path=figure_path,
+    ).info("Summarized run metrics")
     return csv_path, figure_path

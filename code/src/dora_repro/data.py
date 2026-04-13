@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import zipfile
 from dataclasses import asdict
 from io import BytesIO
@@ -13,7 +14,10 @@ import httpx
 from datasets import load_dataset
 
 from dora_repro.config import TASKS, repo_root
+from dora_repro.logging_utils import bind_logger
 from dora_repro.prompts import EvalSample, TrainingSample
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_TRAINING_URL = (
     "https://raw.githubusercontent.com/AGI-Edgerunners/LLM-Adapters/main/"
@@ -50,17 +54,21 @@ def resolve_training_source(train_source: str, cache_dir: Path) -> Path:
     if train_source == "auto":
         local = repo_root() / "data" / "commonsense_170k.json"
         if local.is_file():
+            bind_logger(logger, path=local).info("Using local commonsense training data")
             return local
         train_source = DEFAULT_TRAINING_URL
 
     candidate = Path(train_source).expanduser()
     if candidate.is_file():
+        bind_logger(logger, path=candidate).info("Using explicit training data path")
         return candidate
     if train_source.startswith(("http://", "https://")):
         target = ensure_dir(cache_dir / "raw") / "commonsense_170k.json"
+        bind_logger(logger, url=train_source, target=target).info("Downloading training data")
         response = httpx.get(train_source, timeout=60.0)
         response.raise_for_status()
         target.write_bytes(response.content)
+        bind_logger(logger, path=target).info("Downloaded training data")
         return target
     msg = f"Unsupported training source: {train_source}"
     raise ValueError(msg)
@@ -89,6 +97,7 @@ def normalize_training_data(
     source = resolve_training_source(train_source, resolved_cache)
     output_path = resolved_cache / "normalized" / "train" / "commonsense_170k.jsonl"
     records = [asdict(sample) for sample in load_training_samples(source)]
+    bind_logger(logger, records=len(records), output_path=output_path).info("Normalized training data")
     return write_jsonl(records, output_path)
 
 
@@ -262,12 +271,22 @@ def normalize_benchmark_task(task: str, limit: int | None = None) -> list[EvalSa
         msg = f"Unsupported benchmark task: {task}"
         raise ValueError(msg)
     dataset_id, subset, split = benchmark_specs()[task]
+    task_logger = bind_logger(
+        logger,
+        task=task,
+        dataset_id=dataset_id,
+        subset=subset,
+        split=split,
+        limit=limit,
+    )
+    task_logger.info("Loading benchmark task")
     try:
         dataset = load_dataset(dataset_id, name=subset, split=split)
         rows = list(dataset if limit is None else dataset.select(range(min(limit, len(dataset)))))
     except RuntimeError as error:
         if "scripts are no longer supported" not in str(error):
             raise
+        task_logger.warning("Falling back to manual benchmark download")
         rows = _load_script_backed_rows(task)
         if limit is not None:
             rows = rows[:limit]
@@ -281,7 +300,9 @@ def normalize_benchmark_task(task: str, limit: int | None = None) -> list[EvalSa
         "ARC-Challenge": lambda row: _multiple_choice_instruction("ARC-Challenge", row),
         "openbookqa": lambda row: _multiple_choice_instruction("openbookqa", row),
     }
-    return [converters[task](dict(row)) for row in rows]
+    samples = [converters[task](dict(row)) for row in rows]
+    bind_logger(logger, task=task, sample_count=len(samples)).info("Normalized benchmark task")
+    return samples
 
 
 def normalize_all_benchmarks(
@@ -296,6 +317,7 @@ def normalize_all_benchmarks(
         samples = normalize_benchmark_task(task, limit=limit)
         output_path = resolved_cache / "normalized" / "eval" / f"{task}.jsonl"
         output_paths[task] = write_jsonl([asdict(sample) for sample in samples], output_path)
+        bind_logger(logger, task=task, output_path=output_path).info("Wrote benchmark JSONL")
     return output_paths
 
 

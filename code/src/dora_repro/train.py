@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import asdict
 from typing import TYPE_CHECKING, cast
 
@@ -23,6 +24,7 @@ from transformers import (
 from dora_repro.adapters import attach_adapter
 from dora_repro.auth import resolve_hf_token
 from dora_repro.config import AdapterPreset
+from dora_repro.logging_utils import bind_logger
 from dora_repro.prompts import TrainingSample, format_training_prompt, format_user_prompt
 from dora_repro.results import ensure_dir, write_snapshot
 
@@ -32,6 +34,9 @@ if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
     from dora_repro.config import ExperimentSpec
+
+
+logger = logging.getLogger(__name__)
 
 
 def _read_training_json(path: Path) -> list[TrainingSample]:
@@ -56,15 +61,24 @@ def load_model_and_tokenizer(
     spec: ExperimentSpec,
 ) -> tuple[PreTrainedModel, PreTrainedTokenizerBase]:
     """Load the base model and tokenizer for training or evaluation."""
+    contextual_logger = bind_logger(
+        logger,
+        model=spec.model.name,
+        method=spec.adapter.method,
+        scope=spec.adapter.scope,
+        runtime=spec.runtime.name,
+    )
     token = resolve_hf_token()
     quantization_config = None
     if spec.runtime.use_4bit:
+        contextual_logger.info("Configuring 4-bit quantization")
         quantization_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type=spec.runtime.bnb_4bit_quant_type,
             bnb_4bit_compute_dtype=_torch_dtype(spec.runtime.bnb_4bit_compute_dtype),
             bnb_4bit_use_double_quant=spec.runtime.bnb_4bit_use_double_quant,
         )
+    contextual_logger.info("Loading base model and tokenizer", extra={"model_id": spec.model.model_id})
     model = cast(
         "PreTrainedModel",
         AutoModelForCausalLM.from_pretrained(
@@ -86,14 +100,17 @@ def load_model_and_tokenizer(
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
     if spec.runtime.use_4bit:
+        contextual_logger.info("Preparing model for k-bit training")
         model = prepare_model_for_kbit_training(
             model,
             use_gradient_checkpointing=spec.runtime.gradient_checkpointing,
         )
     elif spec.runtime.gradient_checkpointing:
+        contextual_logger.info("Enabling gradient checkpointing")
         model.gradient_checkpointing_enable()
     model.config.use_cache = False
     model = attach_adapter(model, spec.adapter)
+    contextual_logger.info("Attached adapter")
     return cast("PreTrainedModel", model), tokenizer
 
 
@@ -162,11 +179,26 @@ def run_training(
     spec: ExperimentSpec, output_dir: Path, resume_from_checkpoint: Path | None = None
 ) -> Path:
     """Run fine-tuning and save the adapter to the run directory."""
+    run_logger = bind_logger(
+        logger,
+        run_name=output_dir.name,
+        model=spec.model.name,
+        method=spec.adapter.method,
+        scope=spec.adapter.scope,
+    )
     ensure_dir(output_dir)
     checkpoints_dir = ensure_dir(output_dir / "checkpoints")
+    run_logger.info("Writing run snapshot", extra={"snapshot_path": output_dir / "config.snapshot.toml"})
     write_snapshot(output_dir / "config.snapshot.toml", spec)
     model, tokenizer = load_model_and_tokenizer(spec)
     train_dataset, eval_dataset = _prepare_dataset(spec, tokenizer)
+    run_logger.info(
+        "Prepared tokenized datasets",
+        extra={
+            "train_examples": len(train_dataset),
+            "eval_examples": 0 if eval_dataset is None else len(eval_dataset),
+        },
+    )
     bf16, fp16 = _half_precision_flags()
     trainer = Trainer(
         model=model,
@@ -206,6 +238,7 @@ def run_training(
         if resume_from_checkpoint is not None
         else None
     )
+    run_logger.info("Training loop finished")
     adapter_dir = ensure_dir(output_dir / "adapter")
     model.save_pretrained(adapter_dir)
     tokenizer.save_pretrained(adapter_dir)
@@ -215,11 +248,13 @@ def run_training(
         "runtime": asdict(spec.runtime),
     }
     (output_dir / "run.metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    run_logger.info("Saved adapter artifacts", extra={"adapter_dir": adapter_dir})
     return adapter_dir
 
 
 def smoke_test(output_dir: Path) -> Path:
     """Run a fast, network-free sanity check of adapter wiring."""
+    smoke_logger = bind_logger(logger, output_dir=output_dir)
     ensure_dir(output_dir)
     config = LlamaConfig()
     config.vocab_size = 128
@@ -243,4 +278,5 @@ def smoke_test(output_dir: Path) -> Path:
     }
     output_path = output_dir / "smoke_test.json"
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    smoke_logger.info("Smoke test completed", extra={"output_path": output_path})
     return output_path
