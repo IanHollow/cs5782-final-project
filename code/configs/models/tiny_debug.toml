@@ -1,0 +1,4 @@
+model_id = "HuggingFaceTB/SmolLM2-135M"
+learning_rate = 2e-4
+cutoff_len = 256
+trust_remote_code = false
