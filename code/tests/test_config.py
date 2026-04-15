@@ -54,6 +54,26 @@ def test_build_paper_colab_experiment_uses_lower_overhead_schedule() -> None:
         experiment_name="paper_colab",
     )
     assert spec.num_epochs == 3
-    assert spec.save_steps == 2000
-    assert spec.eval_steps == 2000
+    assert spec.train_data_path.name == "commonsense_15k.json"
+    assert spec.save_steps == 200
+    assert spec.eval_steps == 200
     assert spec.train_on_inputs is False
+
+
+def test_non_debug_presets_default_to_15k_dataset() -> None:
+    default_spec = build_experiment(
+        model_name="llama2_7b",
+        method="dora",
+        scope="full",
+        runtime_name="official",
+        experiment_name="default",
+    )
+    paper_spec = build_experiment(
+        model_name="llama2_7b",
+        method="dora",
+        scope="full",
+        runtime_name="official",
+        experiment_name="paper_llama2_7b",
+    )
+    assert default_spec.train_data_path.name == "commonsense_15k.json"
+    assert paper_spec.train_data_path.name == "commonsense_15k.json"

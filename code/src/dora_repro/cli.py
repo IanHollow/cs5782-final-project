@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from dora_repro.assets import available_model_presets, prefetch_model_to_hf_cache
 from dora_repro.config import TASKS, build_experiment, repo_root
@@ -21,10 +22,96 @@ if TYPE_CHECKING:
     from argparse import Namespace
     from collections.abc import Sequence
 
+    from dora_repro.config import AdapterMethod, TargetScope
+
+ENV_PREFIX = "DORA_REPRO_"
+METHOD_CHOICES = ("lora", "dora")
+SCOPE_CHOICES = ("full", "attention_only", "mlp_only")
+
 
 def _repo_path(raw_path: str) -> Path:
     candidate = Path(raw_path)
     return candidate if candidate.is_absolute() else repo_root() / candidate
+
+
+def _env_name(name: str) -> str:
+    return f"{ENV_PREFIX}{name}"
+
+
+def _env_value(name: str) -> str | None:
+    raw = os.environ.get(_env_name(name))
+    if raw is None:
+        return None
+    value = raw.strip()
+    return value or None
+
+
+def _resolve_value(explicit: str | None, env_name: str, fallback: str) -> str:
+    return explicit if explicit is not None else _env_value(env_name) or fallback
+
+
+def _resolve_choice(
+    explicit: str | None,
+    env_name: str,
+    fallback: str,
+    choices: tuple[str, ...],
+) -> str:
+    value = _resolve_value(explicit, env_name, fallback)
+    if value not in choices:
+        msg = f"{_env_name(env_name)} must be one of: {', '.join(choices)}"
+        raise ValueError(msg)
+    return value
+
+
+def _parse_task_selection(raw: Sequence[str] | str | None) -> tuple[str, ...] | None:
+    if raw is None:
+        return None
+    items = [raw] if isinstance(raw, str) else list(raw)
+    tokens = [token.strip() for item in items for token in str(item).split(",") if token.strip()]
+    if not tokens:
+        return None
+    if any(token.lower() == "all" for token in tokens):
+        if len(tokens) != 1:
+            msg = "'all' cannot be combined with specific benchmark task names"
+            raise ValueError(msg)
+        return TASKS
+    task_lookup = {task.lower(): task for task in TASKS}
+    try:
+        return tuple(task_lookup[token.lower()] for token in tokens)
+    except KeyError as error:
+        msg = f"Unsupported benchmark task: {error.args[0]}"
+        raise ValueError(msg) from error
+
+
+def _resolve_train_settings(args: Namespace) -> dict[str, str | Path | None]:
+    model = _resolve_value(args.model, "MODEL", "llama2_7b")
+    method = cast(
+        "AdapterMethod",
+        _resolve_choice(args.method, "METHOD", "dora", METHOD_CHOICES),
+    )
+    scope = cast(
+        "TargetScope",
+        _resolve_choice(args.scope, "SCOPE", "full", SCOPE_CHOICES),
+    )
+    runtime = _resolve_value(args.runtime, "RUNTIME", "official")
+    experiment = _resolve_value(args.experiment, "EXPERIMENT", "default")
+    train_data_path = args.train_data_path or _env_value("TRAIN_DATA_PATH")
+    run_name = args.run_name or _env_value("RUN_NAME")
+    return {
+        "model": model,
+        "method": method,
+        "scope": scope,
+        "runtime": runtime,
+        "experiment": experiment,
+        "train_data_path": _repo_path(train_data_path) if train_data_path else None,
+        "run_name": run_name,
+    }
+
+
+def _resolve_evaluation_tasks(args: Namespace) -> tuple[str, ...] | None:
+    if args.tasks:
+        return _parse_task_selection(args.tasks)
+    return _parse_task_selection(_env_value("EVAL_TASKS"))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -54,15 +141,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     train = subparsers.add_parser("train")
-    train.add_argument("--model", default="llama2_7b")
-    train.add_argument("--method", choices=("lora", "dora"), default="dora")
+    train.add_argument("--model", default=None)
+    train.add_argument("--method", choices=METHOD_CHOICES, default=None)
     train.add_argument(
         "--scope",
-        choices=("full", "attention_only", "mlp_only"),
-        default="full",
+        choices=SCOPE_CHOICES,
+        default=None,
     )
-    train.add_argument("--runtime", default="official")
-    train.add_argument("--experiment", default="default")
+    train.add_argument("--runtime", default=None)
+    train.add_argument("--experiment", default=None)
     train.add_argument("--train-data-path", default=None)
     train.add_argument("--output-dir", default="results/runs")
     train.add_argument("--run-name", default=None)
@@ -146,31 +233,41 @@ def _prepare_assets_command(args: Namespace, logger: logging.Logger) -> int:
 
 
 def _train_command(args: Namespace, logger: logging.Logger) -> int:
-    run_name = args.run_name or _default_run_name(args.model, args.method, args.scope, args.runtime)
+    resolved = _resolve_train_settings(args)
+    model_name = str(resolved["model"])
+    method = cast("AdapterMethod", resolved["method"])
+    scope = cast("TargetScope", resolved["scope"])
+    runtime_name = str(resolved["runtime"])
+    experiment_name = str(resolved["experiment"])
+    train_data_path = resolved["train_data_path"]
+    run_name = cast(
+        "str | None",
+        resolved["run_name"],
+    ) or _default_run_name(model_name, method, scope, runtime_name)
     run_dir = _repo_path(args.output_dir) / run_name
     configure_logging(args.log_level, log_path=run_dir / "logs" / "train.log")
     command_logger = bind_logger(
         logger,
         command=args.command,
         run_name=run_name,
-        model=args.model,
-        method=args.method,
-        scope=args.scope,
-        runtime=args.runtime,
+        model=model_name,
+        method=method,
+        scope=scope,
+        runtime=runtime_name,
     )
     command_logger.info("Building experiment spec")
-    if args.model == "tiny_debug" and args.experiment == "default" and args.train_data_path is None:
+    if model_name == "tiny_debug" and experiment_name == "default" and train_data_path is None:
         command_logger.warning(
             "tiny_debug with the default experiment still uses the full paper-scale "
             "training set; use --experiment debug_quick for a fast Colab sanity run"
         )
     spec = build_experiment(
-        model_name=args.model,
-        method=args.method,
-        scope=args.scope,
-        runtime_name=args.runtime,
-        experiment_name=args.experiment,
-        train_data_path=_repo_path(args.train_data_path) if args.train_data_path else None,
+        model_name=model_name,
+        method=method,
+        scope=scope,
+        runtime_name=runtime_name,
+        experiment_name=experiment_name,
+        train_data_path=cast("Path | None", train_data_path),
     )
     resume_from_checkpoint = (
         _repo_path(args.resume_from_checkpoint) if args.resume_from_checkpoint else None
@@ -189,7 +286,7 @@ def _evaluate_command(args: Namespace, logger: logging.Logger) -> int:
     run_dir = _repo_path(args.run_dir)
     configure_logging(args.log_level, log_path=run_dir / "logs" / "evaluate.log")
     command_logger = bind_logger(logger, command=args.command, run_name=run_dir.name)
-    tasks = tuple(args.tasks) if args.tasks else None
+    tasks = _resolve_evaluation_tasks(args)
     command_logger.info("Evaluating run", extra={"tasks": tasks or "snapshot-default"})
     metrics = evaluate_run(run_dir, tasks)
     command_logger.info("Evaluation completed", extra={"macro_average": metrics["macro_average"]})

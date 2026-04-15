@@ -6,10 +6,10 @@ This directory now serves as the canonical local source for training data and be
 
 For the DoRA commonsense reproduction, the datasets that matter are:
 
-- `data/commonsense_170k.json`
-  The paper-aligned supervised fine-tuning set used by the default experiments.
 - `data/commonsense_15k.json`
-  A smaller debug subset for fast Colab sanity runs.
+  The default supervised fine-tuning set used by the current practical Colab experiments.
+- `data/commonsense_170k.json`
+  A larger optional override if you want a slower, more paper-faithful training run.
 - `data/benchmarks/*.jsonl`
   Local normalized evaluation sets for:
   `boolq`, `piqa`, `social_i_qa`, `hellaswag`, `winogrande`,
@@ -47,6 +47,17 @@ For the full 7B and 8B runs in this repo, prefer the `paper_colab` experiment wi
 - `colab_l4_llama` for the best cost/performance balance
 - `colab_a100_40gb_llama` for faster turnaround
 - `colab_t4_llama` only for budget-constrained or overnight runs
+
+The same `LoRA` / `DoRA` and benchmark-selection env vars used by the CLI are also supported by the Colab notebook:
+
+- `DORA_REPRO_MODEL`
+- `DORA_REPRO_METHOD`
+- `DORA_REPRO_SCOPE`
+- `DORA_REPRO_RUNTIME`
+- `DORA_REPRO_EXPERIMENT`
+- `DORA_REPRO_TRAIN_DATA_PATH`
+- `DORA_REPRO_RUN_NAME`
+- `DORA_REPRO_EVAL_TASKS`
 
 ## Cache
 

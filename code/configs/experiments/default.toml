@@ -1,4 +1,4 @@
-train_data_path = "data/commonsense_170k.json"
+train_data_path = "data/commonsense_15k.json"
 task_names = [
     "boolq",
     "piqa",

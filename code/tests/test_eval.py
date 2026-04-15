@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+import pytest
 import torch
 
 from dora_repro import eval as eval_module
 from dora_repro.prompts import EvalSample
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from dora_repro.config import ExperimentSpec
 
 
@@ -92,3 +95,129 @@ def test_evaluation_batch_size_scales_with_runtime_and_device(monkeypatch) -> No
         runtime = _Runtime()
 
     assert eval_module._evaluation_batch_size(cast("ExperimentSpec", _Spec())) == 8
+
+
+def test_evaluate_run_uses_snapshot_tasks_when_no_override(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    seen_tasks: list[str] = []
+
+    def fake_normalize_benchmark_task(task: str) -> list[EvalSample]:
+        seen_tasks.append(task)
+        return [
+            EvalSample(id="1", task=task, instruction="Q", choices=("true", "false"), label="true")
+        ]
+
+    def fake_generate_predictions(
+        _model: object,
+        _tokenizer: object,
+        _samples: list[EvalSample],
+        _max_new_tokens: int,
+        _batch_size: int,
+    ) -> list[dict[str, object]]:
+        return [
+            {
+                "id": "1",
+                "task": seen_tasks[-1],
+                "label": "true",
+                "prediction": "true",
+                "correct": True,
+            }
+        ]
+
+    class _Runtime:
+        name = "colab_l4_llama"
+        per_device_batch_size = 1
+
+    class _Model:
+        name = "llama2_7b"
+        model_id = "meta-llama/Llama-2-7b-hf"
+
+    class _Adapter:
+        method = "dora"
+        scope = "attention_only"
+
+    class _Spec:
+        runtime = _Runtime()
+        model = _Model()
+        adapter = _Adapter()
+        task_names = ("boolq", "piqa")
+        max_new_tokens = 8
+
+    monkeypatch.setattr(eval_module, "load_spec_from_snapshot", lambda _run_dir: _Spec())
+    monkeypatch.setattr(eval_module, "load_trained_model", lambda *_args: (object(), object()))
+    monkeypatch.setattr(eval_module, "_evaluation_batch_size", lambda _spec: 1)
+    monkeypatch.setattr(eval_module, "normalize_benchmark_task", fake_normalize_benchmark_task)
+    monkeypatch.setattr(eval_module, "_generate_predictions", fake_generate_predictions)
+    monkeypatch.setattr(eval_module, "write_json", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(eval_module, "write_jsonl", lambda *_args, **_kwargs: None)
+
+    metrics = eval_module.evaluate_run(tmp_path)
+    assert seen_tasks == ["boolq", "piqa"]
+    assert metrics["boolq"] == pytest.approx(1.0)
+    assert metrics["piqa"] == pytest.approx(1.0)
+
+
+def test_evaluate_run_respects_single_and_multiple_task_overrides(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    seen_tasks: list[str] = []
+
+    def fake_normalize_benchmark_task(task: str) -> list[EvalSample]:
+        seen_tasks.append(task)
+        return [
+            EvalSample(id="1", task=task, instruction="Q", choices=("true", "false"), label="true")
+        ]
+
+    def fake_generate_predictions(
+        _model: object,
+        _tokenizer: object,
+        _samples: list[EvalSample],
+        _max_new_tokens: int,
+        _batch_size: int,
+    ) -> list[dict[str, object]]:
+        return [
+            {
+                "id": "1",
+                "task": seen_tasks[-1],
+                "label": "true",
+                "prediction": "true",
+                "correct": True,
+            }
+        ]
+
+    class _Runtime:
+        name = "colab_l4_llama"
+        per_device_batch_size = 1
+
+    class _Model:
+        name = "llama2_7b"
+        model_id = "meta-llama/Llama-2-7b-hf"
+
+    class _Adapter:
+        method = "lora"
+        scope = "mlp_only"
+
+    class _Spec:
+        runtime = _Runtime()
+        model = _Model()
+        adapter = _Adapter()
+        task_names = ("boolq", "piqa")
+        max_new_tokens = 8
+
+    monkeypatch.setattr(eval_module, "load_spec_from_snapshot", lambda _run_dir: _Spec())
+    monkeypatch.setattr(eval_module, "load_trained_model", lambda *_args: (object(), object()))
+    monkeypatch.setattr(eval_module, "_evaluation_batch_size", lambda _spec: 1)
+    monkeypatch.setattr(eval_module, "normalize_benchmark_task", fake_normalize_benchmark_task)
+    monkeypatch.setattr(eval_module, "_generate_predictions", fake_generate_predictions)
+    monkeypatch.setattr(eval_module, "write_json", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(eval_module, "write_jsonl", lambda *_args, **_kwargs: None)
+
+    eval_module.evaluate_run(tmp_path, ("hellaswag",))
+    assert seen_tasks == ["hellaswag"]
+
+    seen_tasks.clear()
+    eval_module.evaluate_run(tmp_path, ("boolq", "hellaswag"))
+    assert seen_tasks == ["boolq", "hellaswag"]
