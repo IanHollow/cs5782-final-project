@@ -117,6 +117,8 @@ class AdapterLinearBase(nn.Module):
 
     method_name: str
     base_layer: LinearAdapterTarget
+    lora_A: nn.Parameter  # noqa: N815
+    lora_B: nn.Parameter  # noqa: N815
 
     def __init__(
         self,
@@ -139,8 +141,15 @@ class AdapterLinearBase(nn.Module):
         self.alpha = alpha
         self.scaling = alpha / rank
         self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
-        self.lora_A = nn.Parameter(torch.empty(rank, self.in_features))
-        self.lora_B = nn.Parameter(torch.empty(self.out_features, rank))
+        # Match the base linear's device (e.g. CUDA when the parent was loaded with
+        # accelerate device_map); default torch.empty() would stay on CPU and break 4-bit eval.
+        adapter_device = validated_base_layer.weight.device
+        self.lora_A = nn.Parameter(
+            torch.empty(rank, self.in_features, device=adapter_device, dtype=torch.float32)
+        )
+        self.lora_B = nn.Parameter(
+            torch.empty(self.out_features, rank, device=adapter_device, dtype=torch.float32)
+        )
         self.merged = False
         self._merge_backup_weight: torch.Tensor | None = None
 
@@ -206,6 +215,7 @@ class DoRALinear(AdapterLinearBase):
     """DoRA adapter with a trainable output magnitude and LoRA directional update."""
 
     method_name = "dora"
+    magnitude: nn.Parameter
 
     def __init__(
         self,
