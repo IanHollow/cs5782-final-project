@@ -23,6 +23,7 @@ from transformers import (
 
 from dora_repro.adapters import (
     attach_adapter,
+    load_adapter_checkpoint,
     prepare_model_for_adapter_training,
     save_adapter_checkpoint,
 )
@@ -226,6 +227,21 @@ class AdapterTrainer(Trainer):
             save_adapter_checkpoint(
                 cast("torch.nn.Module", self.model), Path(output_dir), self.adapter_spec
             )
+
+    def _load_from_checkpoint(
+        self, resume_from_checkpoint: str | None, model: torch.nn.Module | None = None
+    ) -> None:
+        """Override to load only adapter weights from the checkpoint directory."""
+        if resume_from_checkpoint is None:
+            return
+        if model is None:
+            model = cast("torch.nn.Module", getattr(self, "model", None))
+        if model is not None:
+            load_adapter_checkpoint(model, Path(resume_from_checkpoint))
+
+    def _load_optimizer_and_scheduler(self, checkpoint: str | None) -> None:  # noqa: PLR6301
+        """Override to prevent missing optimizer state errors for adapter-only saves."""
+        _ = checkpoint
 
 
 def run_training(

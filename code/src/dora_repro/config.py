@@ -19,9 +19,6 @@ TASKS: tuple[str, ...] = (
 )
 TargetScope = Literal["full", "attention_only", "mlp_only"]
 AdapterMethod = Literal["lora", "dora"]
-# These scopes follow the course project's stated design:
-# `full` reproduces the paper's PEFT target set for the commonsense runs rather than
-# every projection inside the attention/MLP blocks.
 TARGET_MODULES: dict[TargetScope, tuple[str, ...]] = {
     "full": ("q_proj", "k_proj", "v_proj", "up_proj", "down_proj"),
     "attention_only": ("q_proj", "k_proj", "v_proj"),
