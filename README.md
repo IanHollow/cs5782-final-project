@@ -17,9 +17,10 @@ The target reproduction is the paper's commonsense reasoning result: DoRA should
 
 ## Reimplementation Details
 
-The implementation uses modern Hugging Face libraries instead of vendoring NVlabs’ old PEFT fork:
+The implementation uses modern Hugging Face base-model tooling together with a local clean-room LoRA/DoRA adapter stack:
 
-- `transformers` + `peft` for LoRA/DoRA adapters
+- `transformers` for model and tokenizer loading
+- repo-owned `torch.nn.Module` implementations of LoRA and DoRA for the adapter math, injection, merge logic, and checkpointing
 - `datasets` for the 8 evaluation benchmarks
 - `uv` for environment and dependency management
 - `ruff`, `ty`, and `pytest` for repository quality gates
@@ -171,13 +172,13 @@ Aggregate summaries are written to `results/summary/summary.csv` and `results/su
 
 ## Conclusion
 
-The repo is organized around a faithful but maintainable reproduction path: modern PEFT DoRA adapters, config-driven experiment presets, local-first datasets, Hugging Face cache-aware model loading, Colab-aware runtimes, and strict repository checks. That makes it usable both as a class deliverable and as a clean baseline for follow-up ablations.
+The repo is organized around a faithful but maintainable reproduction path: locally implemented LoRA and DoRA adapters, config-driven experiment presets, local-first datasets, Hugging Face cache-aware model loading, Colab-aware runtimes, and strict repository checks. That makes it usable both as a class deliverable and as a clean baseline for follow-up ablations.
 
 ## References
 
 1. Liu et al. *DoRA: Weight-Decomposed Low-Rank Adaptation*. ICML 2024 Oral.
 2. [NVlabs/DoRA](https://github.com/NVlabs/DoRA)
-3. [Hugging Face PEFT documentation](https://huggingface.co/docs/peft)
+3. [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)
 4. [Hugging Face Transformers documentation](https://huggingface.co/docs/transformers)
 
 ## Acknowledgements

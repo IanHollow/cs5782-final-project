@@ -95,6 +95,22 @@ def test_normalize_training_data_uses_local_file(tmp_path: Path) -> None:
     assert '"instruction": "Q"' in contents
 
 
+def test_resolve_training_source_auto_prefers_local_15k_dataset(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    preferred = data_dir / "commonsense_15k.json"
+    preferred.write_text("[]", encoding="utf-8")
+    legacy = data_dir / "commonsense_170k.json"
+    legacy.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(data, "repo_root", lambda: tmp_path)
+
+    resolved = data.resolve_training_source("auto", tmp_path / "cache")
+    assert resolved == preferred
+
+
 def test_normalize_benchmark_task_prefers_local_jsonl(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

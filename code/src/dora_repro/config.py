@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tomllib
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
 
@@ -19,11 +19,15 @@ TASKS: tuple[str, ...] = (
 )
 TargetScope = Literal["full", "attention_only", "mlp_only"]
 AdapterMethod = Literal["lora", "dora"]
+# These scopes follow the course project's stated design:
+# `full` reproduces the paper's PEFT target set for the commonsense runs rather than
+# every projection inside the attention/MLP blocks.
 TARGET_MODULES: dict[TargetScope, tuple[str, ...]] = {
     "full": ("q_proj", "k_proj", "v_proj", "up_proj", "down_proj"),
     "attention_only": ("q_proj", "k_proj", "v_proj"),
     "mlp_only": ("up_proj", "down_proj"),
 }
+DEFAULT_TRAIN_DATA_PATH = "data/commonsense_15k.json"
 
 
 @dataclass(slots=True, frozen=True)
@@ -153,6 +157,14 @@ def load_experiment_defaults(name: str, config_dir: Path | None = None) -> dict[
     return _load_toml(base_dir / "experiments" / f"{name}.toml")
 
 
+def _method_overrides(defaults: dict[str, Any], method: AdapterMethod) -> dict[str, Any]:
+    overrides = defaults.get("method_overrides", {})
+    if not isinstance(overrides, dict):
+        return {}
+    selected = overrides.get(method, {})
+    return selected if isinstance(selected, dict) else {}
+
+
 def build_experiment(
     *,
     model_name: str,
@@ -167,6 +179,9 @@ def build_experiment(
     defaults = load_experiment_defaults(experiment_name, config_dir)
     model = load_model_preset(model_name, config_dir)
     runtime = load_runtime_preset(runtime_name, config_dir)
+    method_defaults = _method_overrides(defaults, method)
+    if "learning_rate" in method_defaults:
+        model = replace(model, learning_rate=float(method_defaults["learning_rate"]))
     task_names = tuple(str(item) for item in defaults.get("task_names", TASKS))
     if any(task not in TASKS for task in task_names):
         msg = f"Unsupported task list: {task_names!r}"
@@ -178,15 +193,15 @@ def build_experiment(
         adapter=AdapterPreset(
             method=method,
             scope=scope,
-            rank=int(defaults.get("rank", 8)),
-            alpha=int(defaults.get("alpha", 16)),
-            dropout=float(defaults.get("dropout", 0.05)),
+            rank=int(method_defaults.get("rank", defaults.get("rank", 8))),
+            alpha=int(method_defaults.get("alpha", defaults.get("alpha", 16))),
+            dropout=float(method_defaults.get("dropout", defaults.get("dropout", 0.05))),
         ),
         runtime=runtime,
         train_data_path=(
             train_data_path
             if train_data_path is not None
-            else repo_root() / str(defaults.get("train_data_path", "data/commonsense_170k.json"))
+            else repo_root() / str(defaults.get("train_data_path", DEFAULT_TRAIN_DATA_PATH))
         ),
         task_names=task_names,
         max_train_samples=(

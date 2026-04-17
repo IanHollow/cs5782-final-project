@@ -19,6 +19,8 @@ from dora_repro.prompts import EvalSample, TrainingSample
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_LOCAL_TRAINING_FILE = "commonsense_15k.json"
+LEGACY_LOCAL_TRAINING_FILE = "commonsense_170k.json"
 DEFAULT_TRAINING_URL = (
     "https://raw.githubusercontent.com/AGI-Edgerunners/LLM-Adapters/main/"
     "ft-training_set/commonsense_170k.json"
@@ -58,10 +60,11 @@ def benchmark_data_dir(root: Path | None = None) -> Path:
 def resolve_training_source(train_source: str, cache_dir: Path) -> Path:
     """Resolve the commonsense training data from auto/path/URL inputs."""
     if train_source == "auto":
-        local = repo_root() / "data" / "commonsense_170k.json"
-        if local.is_file():
-            bind_logger(logger, path=local).info("Using local commonsense training data")
-            return local
+        for local_name in (DEFAULT_LOCAL_TRAINING_FILE, LEGACY_LOCAL_TRAINING_FILE):
+            local = repo_root() / "data" / local_name
+            if local.is_file():
+                bind_logger(logger, path=local).info("Using local commonsense training data")
+                return local
         train_source = DEFAULT_TRAINING_URL
 
     candidate = Path(train_source).expanduser()
@@ -69,7 +72,8 @@ def resolve_training_source(train_source: str, cache_dir: Path) -> Path:
         bind_logger(logger, path=candidate).info("Using explicit training data path")
         return candidate
     if train_source.startswith(("http://", "https://")):
-        target = ensure_dir(cache_dir / "raw") / "commonsense_170k.json"
+        target_name = Path(train_source).name or LEGACY_LOCAL_TRAINING_FILE
+        target = ensure_dir(cache_dir / "raw") / target_name
         bind_logger(logger, url=train_source, target=target).info("Downloading training data")
         response = httpx.get(train_source, timeout=60.0)
         response.raise_for_status()
@@ -101,7 +105,7 @@ def normalize_training_data(
     """Normalize the commonsense training JSON into JSONL."""
     resolved_cache = default_cache_dir() if cache_dir is None else cache_dir
     source = resolve_training_source(train_source, resolved_cache)
-    output_path = resolved_cache / "normalized" / "train" / "commonsense_170k.jsonl"
+    output_path = resolved_cache / "normalized" / "train" / f"{source.stem}.jsonl"
     records = [asdict(sample) for sample in load_training_samples(source)]
     bind_logger(logger, records=len(records), output_path=output_path).info(
         "Normalized training data"

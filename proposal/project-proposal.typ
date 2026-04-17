@@ -218,7 +218,7 @@
 
 - #strong[Main settings:] We plan to use the released hyperparameters as closely as possible, including 3 training epochs, cutoff length 256, batch size 16, gradient checkpointing, and the official learning rates for the chosen model.
 
-- #strong[Tools:] We will use the official NVlabs DoRA code when possible, Hugging Face `transformers`, and Hugging Face `peft` with DoRA support. Training and evaluation will be run mainly on Google Colab Pro, while the M4 MacBook Pro will be used for debugging, plotting, and organizing results.
+- #strong[Tools:] We will use the official NVlabs DoRA code when possible, Hugging Face `transformers`, and a local PyTorch implementation of LoRA and DoRA adapters. Training and evaluation will be run mainly on Google Colab Pro, while the M4 MacBook Pro will be used for debugging, plotting, and organizing results.
 
 - #strong[Compute and time:] Since all four team members have Google Colab Pro, the project is feasible. A main 7B or 8B fine-tuning run should take about half a day to one day, depending on the GPU assigned by Colab. Full evaluation should take a few hours. This is highly realistic for our team; the six primary experimental runs (Full, Attention-only, and MLP-only for both LoRA and DoRA) can be distributed efficiently across our four Colab Pro accounts, requiring at most two fine-tuning runs per member.
 

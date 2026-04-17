@@ -20,3 +20,12 @@ weight_decay = 0.0
 train_on_inputs = false
 seed = 42
 max_new_tokens = 8
+
+[method_overrides.lora]
+learning_rate = 3e-4
+rank = 32
+alpha = 64
+
+[method_overrides.dora]
+rank = 16
+alpha = 32

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, cast
 
 import torch
 from datasets import Dataset
-from peft import prepare_model_for_kbit_training
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -21,7 +20,11 @@ from transformers import (
     TrainingArguments,
 )
 
-from dora_repro.adapters import attach_adapter
+from dora_repro.adapters import (
+    attach_adapter,
+    prepare_model_for_adapter_training,
+    save_adapter_checkpoint,
+)
 from dora_repro.auth import resolve_hf_token
 from dora_repro.config import AdapterPreset
 from dora_repro.logging_utils import bind_logger
@@ -57,6 +60,17 @@ def _torch_dtype(name: str) -> torch.dtype:
     return mapping[name]
 
 
+def _build_quantization_config(spec: ExperimentSpec) -> BitsAndBytesConfig | None:
+    if not spec.runtime.use_4bit:
+        return None
+    return BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type=spec.runtime.bnb_4bit_quant_type,
+        bnb_4bit_compute_dtype=_torch_dtype(spec.runtime.bnb_4bit_compute_dtype),
+        bnb_4bit_use_double_quant=spec.runtime.bnb_4bit_use_double_quant,
+    )
+
+
 def _quantized_device_map() -> dict[str, int] | None:
     """Place quantized single-GPU training runs on the active CUDA device."""
     if not torch.cuda.is_available():
@@ -87,15 +101,9 @@ def load_model_and_tokenizer(
         runtime=spec.runtime.name,
     )
     token = resolve_hf_token()
-    quantization_config = None
-    if spec.runtime.use_4bit:
+    quantization_config = _build_quantization_config(spec)
+    if quantization_config is not None:
         contextual_logger.info("Configuring 4-bit quantization")
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type=spec.runtime.bnb_4bit_quant_type,
-            bnb_4bit_compute_dtype=_torch_dtype(spec.runtime.bnb_4bit_compute_dtype),
-            bnb_4bit_use_double_quant=spec.runtime.bnb_4bit_use_double_quant,
-        )
     device_map = _quantized_device_map() if spec.runtime.use_4bit else None
     contextual_logger.info(
         "Loading base model and tokenizer",
@@ -124,16 +132,10 @@ def load_model_and_tokenizer(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
-    if spec.runtime.use_4bit:
-        contextual_logger.info("Preparing model for k-bit training")
-        model = prepare_model_for_kbit_training(
-            model,
-            use_gradient_checkpointing=spec.runtime.gradient_checkpointing,
-        )
-    elif spec.runtime.gradient_checkpointing:
-        contextual_logger.info("Enabling gradient checkpointing")
-        model.gradient_checkpointing_enable()
-    model.config.use_cache = False
+    model = prepare_model_for_adapter_training(
+        model,
+        use_gradient_checkpointing=spec.runtime.gradient_checkpointing,
+    )
     model = attach_adapter(model, spec.adapter)
     contextual_logger.info("Attached adapter")
     return cast("PreTrainedModel", model), tokenizer
@@ -281,7 +283,7 @@ def run_training(
     )
     run_logger.info("Training loop finished")
     adapter_dir = ensure_dir(output_dir / "adapter")
-    model.save_pretrained(adapter_dir)
+    save_adapter_checkpoint(model, adapter_dir, spec.adapter)
     tokenizer.save_pretrained(adapter_dir)
     metadata = {
         "adapter": asdict(spec.adapter),

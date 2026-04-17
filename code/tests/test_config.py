@@ -1,3 +1,5 @@
+import pytest
+
 from dora_repro.config import (
     TARGET_MODULES,
     build_experiment,
@@ -58,6 +60,29 @@ def test_build_paper_colab_experiment_uses_lower_overhead_schedule() -> None:
     assert spec.save_steps == 200
     assert spec.eval_steps == 200
     assert spec.train_on_inputs is False
+
+
+def test_paper_experiment_uses_method_specific_hyperparameters() -> None:
+    lora_spec = build_experiment(
+        model_name="llama2_7b",
+        method="lora",
+        scope="full",
+        runtime_name="official",
+        experiment_name="paper_llama2_7b",
+    )
+    dora_spec = build_experiment(
+        model_name="llama2_7b",
+        method="dora",
+        scope="full",
+        runtime_name="official",
+        experiment_name="paper_llama2_7b",
+    )
+    assert lora_spec.model.learning_rate == pytest.approx(3e-4)
+    assert lora_spec.adapter.rank == 32
+    assert lora_spec.adapter.alpha == 64
+    assert dora_spec.model.learning_rate == pytest.approx(2e-4)
+    assert dora_spec.adapter.rank == 16
+    assert dora_spec.adapter.alpha == 32
 
 
 def test_non_debug_presets_default_to_15k_dataset() -> None:

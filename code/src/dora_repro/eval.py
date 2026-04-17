@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import torch
-from peft import PeftModel
 from tqdm.auto import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
+from dora_repro.adapters import attach_adapter, load_adapter_checkpoint, merge_adapter_layers
 from dora_repro.auth import resolve_hf_token
-from dora_repro.config import build_experiment
+from dora_repro.config import AdapterPreset, ExperimentSpec, ModelPreset, RuntimePreset
 from dora_repro.data import normalize_benchmark_task
 from dora_repro.logging_utils import bind_logger
 from dora_repro.prompts import extract_prediction, format_eval_prompt
@@ -22,11 +22,33 @@ from dora_repro.results import macro_average, write_json, write_jsonl
 if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
-    from dora_repro.config import AdapterMethod, ExperimentSpec, TargetScope
+    from dora_repro.config import AdapterMethod, TargetScope
     from dora_repro.prompts import EvalSample
 
 
 logger = logging.getLogger(__name__)
+
+
+def _torch_dtype(name: str) -> torch.dtype:
+    mapping = {"float16": torch.float16, "bfloat16": torch.bfloat16}
+    return mapping[name]
+
+
+def _build_quantization_config(spec: ExperimentSpec) -> BitsAndBytesConfig | None:
+    if not spec.runtime.use_4bit:
+        return None
+    return BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type=spec.runtime.bnb_4bit_quant_type,
+        bnb_4bit_compute_dtype=_torch_dtype(spec.runtime.bnb_4bit_compute_dtype),
+        bnb_4bit_use_double_quant=spec.runtime.bnb_4bit_use_double_quant,
+    )
+
+
+def _quantized_device_map() -> dict[str, int] | None:
+    if not torch.cuda.is_available():
+        return None
+    return {"": torch.cuda.current_device()}
 
 
 def _load_snapshot(path: Path) -> dict[str, Any]:
@@ -37,15 +59,48 @@ def _load_snapshot(path: Path) -> dict[str, Any]:
 def load_spec_from_snapshot(run_dir: Path) -> ExperimentSpec:
     """Reconstruct an experiment spec from a snapshot file."""
     payload = _load_snapshot(run_dir / "config.snapshot.toml")
-    method = cast("AdapterMethod", str(payload["adapter"]["method"]))
-    scope = cast("TargetScope", str(payload["adapter"]["scope"]))
-    return build_experiment(
-        model_name=str(payload["model"]["name"]),
-        method=method,
-        scope=scope,
-        runtime_name=str(payload["runtime"]["name"]),
+    model_payload = cast("dict[str, Any]", payload["model"])
+    adapter_payload = cast("dict[str, Any]", payload["adapter"])
+    runtime_payload = cast("dict[str, Any]", payload["runtime"])
+    return ExperimentSpec(
         experiment_name=str(payload["experiment_name"]),
+        model=ModelPreset(
+            name=str(model_payload["name"]),
+            model_id=str(model_payload["model_id"]),
+            learning_rate=float(model_payload["learning_rate"]),
+            cutoff_len=int(model_payload.get("cutoff_len", 256)),
+            trust_remote_code=bool(model_payload.get("trust_remote_code", False)),
+        ),
+        adapter=AdapterPreset(
+            method=cast("AdapterMethod", str(adapter_payload["method"])),
+            scope=cast("TargetScope", str(adapter_payload["scope"])),
+            rank=int(adapter_payload.get("rank", 8)),
+            alpha=int(adapter_payload.get("alpha", 16)),
+            dropout=float(adapter_payload.get("dropout", 0.05)),
+        ),
+        runtime=RuntimePreset(
+            name=str(runtime_payload["name"]),
+            per_device_batch_size=int(runtime_payload["per_device_batch_size"]),
+            effective_batch_size=int(runtime_payload["effective_batch_size"]),
+            gradient_checkpointing=bool(runtime_payload["gradient_checkpointing"]),
+            use_4bit=bool(runtime_payload.get("use_4bit", False)),
+            bnb_4bit_quant_type=str(runtime_payload.get("bnb_4bit_quant_type", "nf4")),
+            bnb_4bit_compute_dtype=str(runtime_payload.get("bnb_4bit_compute_dtype", "bfloat16")),
+            bnb_4bit_use_double_quant=bool(runtime_payload.get("bnb_4bit_use_double_quant", True)),
+        ),
         train_data_path=Path(str(payload["train_data_path"])),
+        task_names=tuple(str(task) for task in payload["task_names"]),
+        max_train_samples=(
+            None if payload.get("max_train_samples") is None else int(payload["max_train_samples"])
+        ),
+        val_set_size=int(payload.get("val_set_size", 120)),
+        num_epochs=int(payload.get("num_epochs", 3)),
+        save_steps=int(payload.get("save_steps", 80)),
+        eval_steps=int(payload.get("eval_steps", 80)),
+        weight_decay=float(payload.get("weight_decay", 0.0)),
+        train_on_inputs=bool(payload.get("train_on_inputs", False)),
+        seed=int(payload.get("seed", 42)),
+        max_new_tokens=int(payload.get("max_new_tokens", 8)),
     )
 
 
@@ -84,19 +139,25 @@ def load_trained_model(
     )
     token = resolve_hf_token()
     eval_logger.info("Loading base model for evaluation", extra={"model_id": spec.model.model_id})
+    quantization_config = _build_quantization_config(spec)
+    device_map = _quantized_device_map() if spec.runtime.use_4bit else None
     base_model = cast(
         "PreTrainedModel",
         AutoModelForCausalLM.from_pretrained(
             spec.model.model_id,
             attn_implementation="sdpa",
+            device_map=device_map,
+            low_cpu_mem_usage=spec.runtime.use_4bit,
             token=token,
             trust_remote_code=spec.model.trust_remote_code,
+            quantization_config=quantization_config,
         ),
     )
-    model = PeftModel.from_pretrained(base_model, run_dir / "adapter")
-    if hasattr(model, "merge_and_unload"):
+    model = attach_adapter(base_model, spec.adapter)
+    load_adapter_checkpoint(model, run_dir / "adapter")
+    if not spec.runtime.use_4bit:
         eval_logger.info("Merging adapter weights into base model")
-        model = model.merge_and_unload()
+        merge_adapter_layers(model)
     model = cast("PreTrainedModel", model)
     model.eval()
     tokenizer = cast(
@@ -109,6 +170,9 @@ def load_trained_model(
     model.generation_config.pad_token_id = tokenizer.pad_token_id
     model.generation_config.eos_token_id = tokenizer.eos_token_id
     device = torch.device(_device())
+    if spec.runtime.use_4bit:
+        eval_logger.info("Loaded quantized evaluation model", extra={"device": device.type})
+        return model, tokenizer
     moved_model = cast("Any", model).to(device)
     eval_logger.info("Loaded evaluation model", extra={"device": device.type})
     return cast("PreTrainedModel", moved_model), tokenizer
