@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import torch
@@ -32,8 +33,6 @@ from dora_repro.prompts import TrainingSample, format_training_prompt, format_us
 from dora_repro.results import ensure_dir, write_snapshot
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
     from dora_repro.config import ExperimentSpec
@@ -137,6 +136,8 @@ def load_model_and_tokenizer(
         use_gradient_checkpointing=spec.runtime.gradient_checkpointing,
     )
     model = attach_adapter(model, spec.adapter)
+    # Bypass Trainer's overly aggressive checks on purely quantized models
+    model._hf_peft_config_loaded = True  # noqa: SLF001
     contextual_logger.info("Attached adapter")
     return cast("PreTrainedModel", model), tokenizer
 
@@ -210,6 +211,23 @@ def _dataloader_pin_memory() -> bool:
     return torch.cuda.is_available()
 
 
+class AdapterTrainer(Trainer):
+    adapter_spec: AdapterPreset
+
+    def _save(
+        self, output_dir: str | None = None, state_dict: dict[str, torch.Tensor] | None = None
+    ) -> None:
+        """Save only the adapter weights during Trainer checkpoints."""
+        _ = state_dict
+        if output_dir is None:
+            output_dir = str(self.args.output_dir)
+        ensure_dir(Path(output_dir))
+        if self.model is not None:
+            save_adapter_checkpoint(
+                cast("torch.nn.Module", self.model), Path(output_dir), self.adapter_spec
+            )
+
+
 def run_training(
     spec: ExperimentSpec, output_dir: Path, resume_from_checkpoint: Path | None = None
 ) -> Path:
@@ -242,7 +260,7 @@ def run_training(
         "Resolved training runtime flags",
         extra={"bf16": bf16, "fp16": fp16, "pin_memory": pin_memory},
     )
-    trainer = Trainer(
+    trainer = AdapterTrainer(
         model=model,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
@@ -276,6 +294,7 @@ def run_training(
             return_tensors="pt",
         ),
     )
+    trainer.adapter_spec = spec.adapter
     trainer.train(
         resume_from_checkpoint=str(resume_from_checkpoint)
         if resume_from_checkpoint is not None
