@@ -187,6 +187,7 @@ def _generate_predictions(
 ) -> list[dict[str, object]]:
     results: list[dict[str, object]] = []
     device_name = _device()
+    tokenizer.model_max_length = 2048
     for batch in tqdm(_batched(samples, batch_size), desc="Evaluating", unit="batch"):
         encoded = tokenizer(
             [format_eval_prompt(sample) for sample in batch],
