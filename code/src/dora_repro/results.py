@@ -41,11 +41,15 @@ def write_jsonl(path: Path, payload: list[dict[str, Any]]) -> Path:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
+def remove_nones(d):
+    if isinstance(d, dict):
+        return {k: remove_nones(v) for k, v in d.items() if v is not None}
+    return d
 
 def write_snapshot(path: Path, spec: ExperimentSpec) -> Path:
     """Write a TOML snapshot for a run."""
     ensure_dir(path.parent)
-    path.write_text(toml_dumps(spec.to_snapshot()), encoding="utf-8")
+    path.write_text(toml_dumps(remove_nones(spec.to_snapshot())), encoding="utf-8")
     return path
 
 
