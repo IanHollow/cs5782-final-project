@@ -68,7 +68,7 @@ Our checked-in Llama-2-7B reproduction results are in `results/analysis/summary_
 
 ![DoRA gains by task and scope](results/analysis/fig3_dora_gains.png)
 
-The main paper-level claim partially reproduces in the full-scope setting, while the ablations suggest the benefit is not uniform across isolated layer groups. `results/analysis/fig4_delta_distribution.png` shows that full-scope DoRA is the most consistent condition, and `results/analysis/fig5_official_comparison.png` places the full-scope result beside the official LLaMA2-7B reference.
+The main paper-level claim partially reproduces in the full-scope setting, while the ablations suggest the benefit is not uniform across isolated layer groups. `results/analysis/fig4_delta_distribution.png` shows that full-scope DoRA is the most consistent condition, and `results/analysis/fig5_official_comparison.png` places the full-scope result beside the paper's LLaMA2-7B LoRA and rank-halved DoRA-dagger reference rows.
 
 ## Conclusion
 

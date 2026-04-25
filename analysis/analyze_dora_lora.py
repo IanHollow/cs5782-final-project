@@ -47,9 +47,11 @@ PALETTE = {"LoRA": "#3569A8", "DoRA": "#D96C3B"}
 
 OFFICIAL_LLAMA2_7B_REFERENCE = [
     {
-        "source": "Official NVlabs LLaMA2-7B",
+        "source": "DoRA paper Table 1 LLaMA2-7B",
         "method": "lora",
+        "paper_method": "LoRA",
         "rank": 32,
+        "params_percent": 0.83,
         "boolq": 0.698,
         "piqa": 0.799,
         "social_i_qa": 0.795,
@@ -61,9 +63,11 @@ OFFICIAL_LLAMA2_7B_REFERENCE = [
         "macro_average": 0.776,
     },
     {
-        "source": "Official NVlabs LLaMA2-7B",
+        "source": "DoRA paper Table 1 LLaMA2-7B",
         "method": "dora",
+        "paper_method": "DoRA-dagger (Ours)",
         "rank": 16,
+        "params_percent": 0.43,
         "boolq": 0.720,
         "piqa": 0.831,
         "social_i_qa": 0.799,
@@ -76,98 +80,7 @@ OFFICIAL_LLAMA2_7B_REFERENCE = [
     },
 ]
 
-PLACEHOLDER_DATA: list[dict[str, Any]] = [
-    {
-        "run_name": "lora_full",
-        "method": "lora",
-        "scope": "full",
-        "model_name": "llama2_7b",
-        "boolq": 0.8186544343,
-        "piqa": 0.7867247008,
-        "social_i_qa": 0.7548618219,
-        "hellaswag": 0.7639912743,
-        "winogrande": 0.7521704815,
-        "ARC-Easy": 0.8614035088,
-        "ARC-Challenge": 0.6889632107,
-        "openbookqa": 0.766,
-        "macro_average": 0.7740961743,
-    },
-    {
-        "run_name": "dora_full",
-        "method": "dora",
-        "scope": "full",
-        "model_name": "llama2_7b",
-        "boolq": 0.8311926606,
-        "piqa": 0.7872687704,
-        "social_i_qa": 0.7548618219,
-        "hellaswag": 0.8239394543,
-        "winogrande": 0.7513812155,
-        "ARC-Easy": 0.8719298246,
-        "ARC-Challenge": 0.7257525084,
-        "openbookqa": 0.79,
-        "macro_average": 0.7920407819,
-    },
-    {
-        "run_name": "lora_attention_only",
-        "method": "lora",
-        "scope": "attention_only",
-        "model_name": "llama2_7b",
-        "boolq": 0.829969419,
-        "piqa": 0.7981501632,
-        "social_i_qa": 0.775332651,
-        "hellaswag": 0.8025293766,
-        "winogrande": 0.7411207577,
-        "ARC-Easy": 0.8438596491,
-        "ARC-Challenge": 0.7658862876,
-        "openbookqa": 0.81,
-        "macro_average": 0.795856038,
-    },
-    {
-        "run_name": "dora_attention_only",
-        "method": "dora",
-        "scope": "attention_only",
-        "model_name": "llama2_7b",
-        "boolq": 0.8229357798,
-        "piqa": 0.78781284,
-        "social_i_qa": 0.7599795292,
-        "hellaswag": 0.7827126071,
-        "winogrande": 0.72691397,
-        "ARC-Easy": 0.8456140351,
-        "ARC-Challenge": 0.7391304348,
-        "openbookqa": 0.782,
-        "macro_average": 0.7808873995,
-    },
-    {
-        "run_name": "lora_mlp_only",
-        "method": "lora",
-        "scope": "mlp_only",
-        "model_name": "llama2_7b",
-        "boolq": 0.8330275229,
-        "piqa": 0.8112078346,
-        "social_i_qa": 0.7784032753,
-        "hellaswag": 0.8073093009,
-        "winogrande": 0.7442778216,
-        "ARC-Easy": 0.8543859649,
-        "ARC-Challenge": 0.6989966555,
-        "openbookqa": 0.796,
-        "macro_average": 0.790451047,
-    },
-    {
-        "run_name": "dora_mlp_only",
-        "method": "dora",
-        "scope": "mlp_only",
-        "model_name": "llama2_7b",
-        "boolq": 0.8415902141,
-        "piqa": 0.7959738847,
-        "social_i_qa": 0.7604912999,
-        "hellaswag": 0.7836088429,
-        "winogrande": 0.7569060773,
-        "ARC-Easy": 0.8701754386,
-        "ARC-Challenge": 0.7491638796,
-        "openbookqa": 0.778,
-        "macro_average": 0.7919887046,
-    },
-]
+CHECKED_IN_SUMMARY_PATH = Path("results/analysis/summary_table.csv")
 
 
 def _configure_plot_style() -> None:
@@ -220,13 +133,21 @@ def load_results(results_dir: Path | None) -> pd.DataFrame:
             except (OSError, json.JSONDecodeError) as exc:
                 print(f"  [warn] Could not read {metrics_path}: {exc}", file=sys.stderr)
 
-    if not rows:
+    if rows:
+        df = pd.DataFrame(rows)
+    elif CHECKED_IN_SUMMARY_PATH.exists():
         print(
-            "  [info] No metrics.json files found; using checked-in example data.", file=sys.stderr
+            f"  [info] No metrics.json files found; using {CHECKED_IN_SUMMARY_PATH}.",
+            file=sys.stderr,
         )
-        rows = PLACEHOLDER_DATA
+        df = pd.read_csv(CHECKED_IN_SUMMARY_PATH)
+    else:
+        msg = (
+            "No metrics.json files found and results/analysis/summary_table.csv is missing. "
+            "Pass --results or run an experiment first."
+        )
+        raise FileNotFoundError(msg)
 
-    df = pd.DataFrame(rows)
     for column in ["method", "scope", "macro_average", *TASKS]:
         if column not in df.columns:
             msg = f"Missing required column '{column}' in metrics data."
@@ -342,13 +263,25 @@ def build_official_comparison(df: pd.DataFrame) -> pd.DataFrame:
     ours = full_rows[["method", "macro_average", *TASKS]].copy()
     ours["source"] = "This repo LLaMA2-7B full scope"
     ours["rank"] = ours["method"].map({"lora": 32, "dora": 16})
+    ours["params_percent"] = pd.NA
+    ours["paper_method"] = ours["method"].map({"lora": "LoRA", "dora": "DoRA"})
     official = pd.DataFrame(OFFICIAL_LLAMA2_7B_REFERENCE)
     comparison = pd.concat([official, ours], ignore_index=True)
     comparison["method_label"] = comparison["method"].map(METHOD_LABELS)
     comparison["macro_points"] = comparison["macro_average"] * 100
     comparison["series"] = comparison["source"] + " - " + comparison["method_label"]
     return comparison[
-        ["source", "method", "method_label", "rank", "macro_average", "macro_points", *TASKS]
+        [
+            "source",
+            "method",
+            "method_label",
+            "paper_method",
+            "rank",
+            "params_percent",
+            "macro_average",
+            "macro_points",
+            *TASKS,
+        ]
     ]
 
 
@@ -477,7 +410,7 @@ def fig4_delta_distribution(gains: pd.DataFrame, out: Path) -> None:
 def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
     """Compare full-scope reproduction macro accuracy with the official reference."""
     plot_df = comparison.copy()
-    plot_df["label"] = plot_df["source"].str.replace(" LLaMA2-7B", "\nLLaMA2-7B", regex=False)
+    plot_df["label"] = plot_df["source"].str.replace(" Table 1 ", "\nTable 1 ", regex=False)
     fig, ax = plt.subplots(figsize=(9.2, 5.2))
     sns.barplot(
         data=plot_df,
