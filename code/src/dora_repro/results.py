@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import matplotlib.pyplot as plt
 from tomli_w import dumps as toml_dumps
@@ -41,15 +41,18 @@ def write_jsonl(path: Path, payload: list[dict[str, Any]]) -> Path:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
-def remove_nones(d):
-    if isinstance(d, dict):
-        return {k: remove_nones(v) for k, v in d.items() if v is not None}
-    return d
+
+def _remove_nones(value: object) -> object:
+    if isinstance(value, dict):
+        return {key: _remove_nones(item) for key, item in value.items() if item is not None}
+    return value
+
 
 def write_snapshot(path: Path, spec: ExperimentSpec) -> Path:
     """Write a TOML snapshot for a run."""
     ensure_dir(path.parent)
-    path.write_text(toml_dumps(remove_nones(spec.to_snapshot())), encoding="utf-8")
+    snapshot = cast("dict[str, object]", _remove_nones(spec.to_snapshot()))
+    path.write_text(toml_dumps(snapshot), encoding="utf-8")
     return path
 
 

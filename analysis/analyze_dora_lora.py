@@ -1,36 +1,17 @@
-"""
-DoRA vs LoRA Analysis: Full / Attention-Only / MLP-Only
-CS 5782 Final Project — Spring 2026
-
-Usage:
-    python analyze_dora_lora.py                          # uses placeholder data
-    python analyze_dora_lora.py --results path/to/runs   # reads real metrics.json files
-
-Outputs (written to ./analysis_output/):
-    summary_table.csv        — all 6 runs × 9 metrics
-    dora_gains_table.csv     — DoRA − LoRA delta per scope and task
-    fig1_macro_grouped.png   — grouped bar chart: macro average by method × scope
-    fig2_per_task_heatmap.png— heatmap of accuracy across all 6 conditions
-    fig3_dora_gains.png      — horizontal bar chart of DoRA gains per scope
-    fig4_spider.png          — radar/spider chart comparing the 6 conditions
-    fig5_per_task_bars.png   — per-task side-by-side bars for every task
-"""
+"""Create analysis tables and Seaborn figures for the DoRA vs LoRA reproduction."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import sys
+from itertools import starmap
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import numpy as np
 import pandas as pd
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Constants
-# ─────────────────────────────────────────────────────────────────────────────
+import seaborn as sns
 
 TASKS = [
     "boolq",
@@ -56,38 +37,46 @@ TASK_LABELS = {
 
 SCOPES = ["full", "attention_only", "mlp_only"]
 SCOPE_LABELS = {
-    "full": "Full\n(Attn + MLP)",
-    "attention_only": "Attention\nOnly",
-    "mlp_only": "MLP\nOnly",
+    "full": "Full",
+    "attention_only": "Attention only",
+    "mlp_only": "MLP only",
 }
 METHODS = ["lora", "dora"]
+METHOD_LABELS = {"lora": "LoRA", "dora": "DoRA"}
+PALETTE = {"LoRA": "#3569A8", "DoRA": "#D96C3B"}
 
-# Style
-COLORS = {
-    "lora": "#4C72B0",
-    "dora": "#DD8452",
-}
-SCOPE_COLORS = {
-    "full": "#2d6a4f",
-    "attention_only": "#1d3557",
-    "mlp_only": "#9d0208",
-}
+OFFICIAL_LLAMA2_7B_REFERENCE = [
+    {
+        "source": "Official NVlabs LLaMA2-7B",
+        "method": "lora",
+        "rank": 32,
+        "boolq": 0.698,
+        "piqa": 0.799,
+        "social_i_qa": 0.795,
+        "hellaswag": 0.836,
+        "winogrande": 0.826,
+        "ARC-Easy": 0.798,
+        "ARC-Challenge": 0.647,
+        "openbookqa": 0.810,
+        "macro_average": 0.776,
+    },
+    {
+        "source": "Official NVlabs LLaMA2-7B",
+        "method": "dora",
+        "rank": 16,
+        "boolq": 0.720,
+        "piqa": 0.831,
+        "social_i_qa": 0.799,
+        "hellaswag": 0.891,
+        "winogrande": 0.830,
+        "ARC-Easy": 0.845,
+        "ARC-Challenge": 0.710,
+        "openbookqa": 0.812,
+        "macro_average": 0.805,
+    },
+]
 
-plt.rcParams.update({
-    "font.family": "serif",
-    "axes.spines.top": False,
-    "axes.spines.right": False,
-    "axes.grid": True,
-    "grid.alpha": 0.3,
-    "figure.dpi": 150,
-})
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Placeholder data — replace with your real metrics.json files
-# ─────────────────────────────────────────────────────────────────────────────
-
-PLACEHOLDER_DATA: list[dict] = [
-    # Llama-2-7B, colab_a100_40gb — real results from benchmark_summary sheet
+PLACEHOLDER_DATA: list[dict[str, Any]] = [
     {
         "run_name": "lora_full",
         "method": "lora",
@@ -180,358 +169,442 @@ PLACEHOLDER_DATA: list[dict] = [
     },
 ]
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Data loading
-# ─────────────────────────────────────────────────────────────────────────────
+
+def _configure_plot_style() -> None:
+    sns.set_theme(
+        context="paper",
+        style="whitegrid",
+        font="DejaVu Sans",
+        rc={
+            "figure.dpi": 180,
+            "savefig.dpi": 220,
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "axes.titleweight": "bold",
+            "axes.labelcolor": "#1f2933",
+            "text.color": "#1f2933",
+            "xtick.color": "#344054",
+            "ytick.color": "#344054",
+            "grid.color": "#d9dee8",
+        },
+    )
+
+
+def _first_float(frame: pd.DataFrame, column: str) -> float:
+    return float(frame[column].to_numpy()[0])
+
+
+def _row_for(df: pd.DataFrame, method: str, scope: str) -> pd.DataFrame:
+    return df[(df["method"] == method) & (df["scope"] == scope)]
+
+
+def _condition_label(method: str, scope: str) -> str:
+    return f"{METHOD_LABELS[method]} - {SCOPE_LABELS[scope]}"
+
+
+def _save(fig: plt.Figure, out: Path) -> None:
+    fig.tight_layout()
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {out.name}")
+
 
 def load_results(results_dir: Path | None) -> pd.DataFrame:
-    """Load metrics from results/runs/*/metrics.json, or fall back to placeholder."""
-    rows: list[dict] = []
+    """Load metrics from results/runs/*/metrics.json, or use checked-in values."""
+    rows: list[dict[str, Any]] = []
 
     if results_dir is not None and results_dir.exists():
         for metrics_path in sorted(results_dir.glob("*/metrics.json")):
             try:
-                rows.append(json.loads(metrics_path.read_text()))
-            except Exception as exc:
+                rows.append(json.loads(metrics_path.read_text(encoding="utf-8")))
+            except (OSError, json.JSONDecodeError) as exc:
                 print(f"  [warn] Could not read {metrics_path}: {exc}", file=sys.stderr)
 
     if not rows:
-        print("  [info] No metrics.json files found — using placeholder data.", file=sys.stderr)
-        print("         Replace PLACEHOLDER_DATA or pass --results <dir> to use real results.\n",
-              file=sys.stderr)
+        print(
+            "  [info] No metrics.json files found; using checked-in example data.", file=sys.stderr
+        )
         rows = PLACEHOLDER_DATA
 
     df = pd.DataFrame(rows)
+    for column in ["method", "scope", "macro_average", *TASKS]:
+        if column not in df.columns:
+            msg = f"Missing required column '{column}' in metrics data."
+            raise ValueError(msg)
 
-    # Ensure required columns exist
-    for col in ["method", "scope", "macro_average"] + TASKS:
-        if col not in df.columns:
-            raise ValueError(f"Missing required column '{col}' in metrics data.")
-
-    # Normalise scope/method to lowercase
     df["method"] = df["method"].str.lower()
     df["scope"] = df["scope"].str.lower()
-
+    df["method_label"] = df["method"].map(METHOD_LABELS)
+    df["scope_label"] = df["scope"].map(SCOPE_LABELS)
+    df["condition"] = list(starmap(_condition_label, zip(df["method"], df["scope"], strict=True)))
     return df
 
 
 def compute_gains(df: pd.DataFrame) -> pd.DataFrame:
-    """DoRA − LoRA delta for each scope and task."""
-    records = []
+    """Compute DoRA minus LoRA deltas for each scope and task."""
+    records: list[dict[str, Any]] = []
     for scope in SCOPES:
-        lora_row = df[(df["method"] == "lora") & (df["scope"] == scope)]
-        dora_row = df[(df["method"] == "dora") & (df["scope"] == scope)]
+        lora_row = _row_for(df, "lora", scope)
+        dora_row = _row_for(df, "dora", scope)
         if lora_row.empty or dora_row.empty:
             continue
-        row: dict = {"scope": scope}
+        row: dict[str, Any] = {"scope": scope, "scope_label": SCOPE_LABELS[scope]}
         for task in TASKS:
-            row[task] = float(dora_row[task].values[0]) - float(lora_row[task].values[0])
-        row["macro_average"] = (
-            float(dora_row["macro_average"].values[0])
-            - float(lora_row["macro_average"].values[0])
+            row[task] = _first_float(dora_row, task) - _first_float(lora_row, task)
+        row["macro_average"] = _first_float(dora_row, "macro_average") - _first_float(
+            lora_row, "macro_average"
         )
         records.append(row)
     return pd.DataFrame(records)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Figures
-# ─────────────────────────────────────────────────────────────────────────────
+def to_long_accuracy(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert wide run metrics to task-level long form."""
+    long = df.melt(
+        id_vars=["method", "scope", "method_label", "scope_label", "condition", "macro_average"],
+        value_vars=TASKS,
+        var_name="task",
+        value_name="accuracy",
+    )
+    long["task_label"] = long["task"].map(TASK_LABELS)
+    long["accuracy_pct"] = long["accuracy"] * 100
+    return long
+
+
+def to_long_gains(gains: pd.DataFrame) -> pd.DataFrame:
+    """Convert wide DoRA-minus-LoRA gains to task-level long form."""
+    long = gains.melt(
+        id_vars=["scope", "scope_label", "macro_average"],
+        value_vars=TASKS,
+        var_name="task",
+        value_name="delta",
+    )
+    long["task_label"] = long["task"].map(TASK_LABELS)
+    long["delta_points"] = long["delta"] * 100
+    long["macro_delta_points"] = long["macro_average"] * 100
+    return long
+
+
+def build_scope_summary(df: pd.DataFrame, gains: pd.DataFrame) -> pd.DataFrame:
+    """Summarize macro gains, task win counts, and cross-task stability."""
+    long_gains = to_long_gains(gains)
+    rows: list[dict[str, Any]] = []
+    for scope in SCOPES:
+        lora_row = _row_for(df, "lora", scope)
+        dora_row = _row_for(df, "dora", scope)
+        scope_gains = long_gains[long_gains["scope"] == scope]
+        if lora_row.empty or dora_row.empty or scope_gains.empty:
+            continue
+        rows.append({
+            "scope": scope,
+            "scope_label": SCOPE_LABELS[scope],
+            "lora_macro": _first_float(lora_row, "macro_average"),
+            "dora_macro": _first_float(dora_row, "macro_average"),
+            "delta": _first_float(gains[gains["scope"] == scope], "macro_average"),
+            "delta_points": _first_float(gains[gains["scope"] == scope], "macro_average") * 100,
+            "task_wins": int((scope_gains["delta"] > 0).sum()),
+            "task_ties": int((scope_gains["delta"] == 0).sum()),
+            "task_losses": int((scope_gains["delta"] < 0).sum()),
+            "best_task": str(scope_gains.loc[scope_gains["delta"].idxmax(), "task_label"]),
+            "worst_task": str(scope_gains.loc[scope_gains["delta"].idxmin(), "task_label"]),
+            "mean_task_delta_points": float(scope_gains["delta_points"].mean()),
+            "median_task_delta_points": float(scope_gains["delta_points"].median()),
+            "task_delta_std_points": float(scope_gains["delta_points"].std(ddof=0)),
+        })
+    return pd.DataFrame(rows)
+
+
+def build_task_summary(gains: pd.DataFrame) -> pd.DataFrame:
+    """Summarize which scope gives DoRA the strongest per-task gain."""
+    long_gains = to_long_gains(gains)
+    rows: list[dict[str, Any]] = []
+    for task in TASKS:
+        task_rows = long_gains[long_gains["task"] == task]
+        best = task_rows.loc[task_rows["delta"].idxmax()]
+        worst = task_rows.loc[task_rows["delta"].idxmin()]
+        rows.append({
+            "task": task,
+            "task_label": TASK_LABELS[task],
+            "best_scope": best["scope"],
+            "best_scope_label": best["scope_label"],
+            "best_delta_points": float(best["delta_points"]),
+            "worst_scope": worst["scope"],
+            "worst_scope_label": worst["scope_label"],
+            "worst_delta_points": float(worst["delta_points"]),
+            "positive_scopes": int((task_rows["delta"] > 0).sum()),
+        })
+    return pd.DataFrame(rows)
+
+
+def build_official_comparison(df: pd.DataFrame) -> pd.DataFrame:
+    """Compare our full-scope macro result with the official LLaMA2-7B reference."""
+    full_rows = df[df["scope"] == "full"].copy()
+    ours = full_rows[["method", "macro_average", *TASKS]].copy()
+    ours["source"] = "This repo LLaMA2-7B full scope"
+    ours["rank"] = ours["method"].map({"lora": 32, "dora": 16})
+    official = pd.DataFrame(OFFICIAL_LLAMA2_7B_REFERENCE)
+    comparison = pd.concat([official, ours], ignore_index=True)
+    comparison["method_label"] = comparison["method"].map(METHOD_LABELS)
+    comparison["macro_points"] = comparison["macro_average"] * 100
+    comparison["series"] = comparison["source"] + " - " + comparison["method_label"]
+    return comparison[
+        ["source", "method", "method_label", "rank", "macro_average", "macro_points", *TASKS]
+    ]
+
 
 def fig1_macro_grouped(df: pd.DataFrame, out: Path) -> None:
-    """Grouped bar chart: macro-average accuracy by method × scope."""
-    scopes_present = [s for s in SCOPES if s in df["scope"].values]
-    x = np.arange(len(scopes_present))
-    width = 0.35
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-
-    for i, method in enumerate(METHODS):
-        vals = []
-        for scope in scopes_present:
-            row = df[(df["method"] == method) & (df["scope"] == scope)]
-            vals.append(float(row["macro_average"].values[0]) if not row.empty else 0.0)
-        bars = ax.bar(x + (i - 0.5) * width, vals, width,
-                      label=method.upper(), color=COLORS[method], alpha=0.88,
-                      edgecolor="white", linewidth=0.8)
-        for bar, val in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.004,
-                    f"{val:.3f}", ha="center", va="bottom", fontsize=8.5)
-
-    ax.set_xticks(x)
-    ax.set_xticklabels([SCOPE_LABELS[s] for s in scopes_present], fontsize=10)
-    ax.set_ylabel("Macro-Average Accuracy", fontsize=11)
-    ax.set_title("DoRA vs LoRA — Macro-Average Accuracy by Scope", fontsize=13, fontweight="bold")
-    ax.set_ylim(0, min(1.0, df["macro_average"].max() * 1.12))
-    ax.legend(fontsize=10)
-
-    fig.tight_layout()
-    fig.savefig(out, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved: {out.name}")
+    """Grouped Seaborn bar chart of macro-average accuracy by method and scope."""
+    plot_df = df.copy()
+    plot_df["macro_points"] = plot_df["macro_average"] * 100
+    fig, ax = plt.subplots(figsize=(9.5, 5.2))
+    sns.barplot(
+        data=plot_df,
+        x="scope_label",
+        y="macro_points",
+        hue="method_label",
+        hue_order=["LoRA", "DoRA"],
+        palette=PALETTE,
+        edgecolor="white",
+        linewidth=1.0,
+        ax=ax,
+    )
+    for container in ax.containers:
+        ax.bar_label(container, fmt="%.1f", padding=3, fontsize=9)
+    ax.set_title("Macro-Average Accuracy by Adapter Scope")
+    ax.set_xlabel("")
+    ax.set_ylabel("Macro-average accuracy (%)")
+    ax.set_ylim(72, 82.5)
+    ax.legend(title="", frameon=True, loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    sns.despine(ax=ax)
+    _save(fig, out)
 
 
 def fig2_heatmap(df: pd.DataFrame, out: Path) -> None:
-    """Heatmap of per-task accuracy for all 6 conditions."""
-    run_order = [
-        (m, s)
-        for s in SCOPES
-        for m in METHODS
-        if not df[(df["method"] == m) & (df["scope"] == s)].empty
-    ]
-    row_labels = [f"{m.upper()}\n{SCOPE_LABELS[s]}" for m, s in run_order]
-    col_labels = [TASK_LABELS[t] for t in TASKS]
-
-    data = np.array([
-        [float(df[(df["method"] == m) & (df["scope"] == s)][t].values[0])
-         for t in TASKS]
-        for m, s in run_order
-    ])
-
-    fig, ax = plt.subplots(figsize=(13, len(run_order) * 0.9 + 1.5))
-    im = ax.imshow(data, cmap="YlGn", vmin=data.min() - 0.02, vmax=min(1.0, data.max() + 0.02),
-                   aspect="auto")
-
-    ax.set_xticks(range(len(col_labels)))
-    ax.set_xticklabels(col_labels, rotation=30, ha="right", fontsize=9)
-    ax.set_yticks(range(len(row_labels)))
-    ax.set_yticklabels(row_labels, fontsize=9)
-    ax.set_title("Per-Task Accuracy Heatmap — All 6 Conditions", fontsize=13, fontweight="bold",
-                 pad=12)
-
-    for i in range(len(run_order)):
-        for j in range(len(TASKS)):
-            ax.text(j, i, f"{data[i, j]:.3f}", ha="center", va="center",
-                    fontsize=8, color="black" if data[i, j] < 0.85 else "white")
-
-    plt.colorbar(im, ax=ax, shrink=0.6, label="Accuracy")
-    fig.tight_layout()
-    fig.savefig(out, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved: {out.name}")
+    """Seaborn heatmap of per-task accuracy for all available conditions."""
+    long_df = to_long_accuracy(df)
+    heatmap_df = long_df.pivot_table(
+        index="condition", columns="task_label", values="accuracy_pct", aggfunc="first"
+    )
+    heatmap_df = heatmap_df[[TASK_LABELS[task] for task in TASKS]]
+    fig, ax = plt.subplots(figsize=(13, 5.8))
+    sns.heatmap(
+        heatmap_df,
+        cmap="YlGnBu",
+        annot=True,
+        fmt=".1f",
+        linewidths=0.6,
+        linecolor="white",
+        cbar_kws={"label": "Accuracy (%)", "shrink": 0.82},
+        ax=ax,
+    )
+    ax.set_title("Per-Task Accuracy Across All Conditions")
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.tick_params(axis="x", rotation=30)
+    ax.tick_params(axis="y", rotation=0)
+    _save(fig, out)
 
 
 def fig3_dora_gains(gains: pd.DataFrame, out: Path) -> None:
-    """Horizontal bar chart — DoRA gain over LoRA per scope, with per-task breakdown."""
-    scopes_present = [s for s in SCOPES if s in gains["scope"].values]
-    n_scopes = len(scopes_present)
-    fig, axes = plt.subplots(1, n_scopes, figsize=(5 * n_scopes, 5), sharey=True)
-    if n_scopes == 1:
-        axes = [axes]
-
-    all_cols = TASKS + ["macro_average"]
-    labels = [TASK_LABELS[t] for t in TASKS] + ["MACRO AVG"]
-
-    for ax, scope in zip(axes, scopes_present):
-        row = gains[gains["scope"] == scope].iloc[0]
-        vals = [float(row[c]) for c in all_cols]
-        colors = [
-            (SCOPE_COLORS[scope] if v >= 0 else "#c1121f")
-            for v in vals
-        ]
-        # Make macro avg bar a bit darker by adjusting its color directly; skip alpha list
-        bars = ax.barh(range(len(labels)), vals, color=colors,
-                       edgecolor="white", linewidth=0.6)
-        ax.axvline(0, color="black", linewidth=0.8)
-
-        for bar, val in zip(bars, vals):
-            xpos = val + 0.001 if val >= 0 else val - 0.001
-            ha = "left" if val >= 0 else "right"
-            ax.text(xpos, bar.get_y() + bar.get_height() / 2,
-                    f"{val:+.3f}", va="center", ha=ha, fontsize=8)
-
-        ax.set_yticks(range(len(labels)))
-        ax.set_yticklabels(labels, fontsize=9)
-        ax.set_title(f"{SCOPE_LABELS[scope].replace(chr(10), ' ')}", fontsize=11,
-                     fontweight="bold", color=SCOPE_COLORS[scope])
-        ax.set_xlabel("Δ Accuracy (DoRA − LoRA)", fontsize=9)
-
-    fig.suptitle("DoRA Gains Over LoRA — Per Scope & Task", fontsize=13, fontweight="bold", y=1.02)
-    fig.tight_layout()
-    fig.savefig(out, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved: {out.name}")
+    """Diverging Seaborn heatmap of DoRA-minus-LoRA gains."""
+    long_gains = to_long_gains(gains)
+    heatmap_df = long_gains.pivot_table(
+        index="scope_label", columns="task_label", values="delta_points", aggfunc="first"
+    )
+    heatmap_df = heatmap_df[[TASK_LABELS[task] for task in TASKS]]
+    fig, ax = plt.subplots(figsize=(13, 4.2))
+    sns.heatmap(
+        heatmap_df,
+        cmap="vlag",
+        center=0,
+        annot=True,
+        fmt="+.1f",
+        linewidths=0.6,
+        linecolor="white",
+        cbar_kws={"label": "DoRA - LoRA accuracy points", "shrink": 0.78},
+        ax=ax,
+    )
+    ax.set_title("Task-Level DoRA Gains by Adapter Scope")
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.tick_params(axis="x", rotation=30)
+    ax.tick_params(axis="y", rotation=0)
+    _save(fig, out)
 
 
-def fig4_spider(df: pd.DataFrame, out: Path) -> None:
-    """Radar chart comparing all 6 conditions across 8 tasks."""
-    angles = np.linspace(0, 2 * np.pi, len(TASKS), endpoint=False).tolist()
-    angles += angles[:1]
-
-    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw={"polar": True})
-
-    linestyles = {"lora": "--", "dora": "-"}
-    scope_marker = {"full": "o", "attention_only": "s", "mlp_only": "^"}
-
-    for scope in SCOPES:
-        for method in METHODS:
-            row = df[(df["method"] == method) & (df["scope"] == scope)]
-            if row.empty:
-                continue
-            vals = [float(row[t].values[0]) for t in TASKS]
-            vals += vals[:1]
-            color = COLORS[method]
-            ax.plot(angles, vals,
-                    linestyle=linestyles[method],
-                    color=color,
-                    linewidth=1.8 if scope == "full" else 1.2,
-                    alpha=0.85,
-                    marker=scope_marker[scope],
-                    markersize=5,
-                    label=f"{method.upper()} / {scope.replace('_', ' ')}")
-            ax.fill(angles, vals, color=color, alpha=0.04)
-
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels([TASK_LABELS[t] for t in TASKS], fontsize=9)
-    ax.set_ylim(0.4, 1.0)
-    ax.set_yticks([0.5, 0.6, 0.7, 0.8, 0.9])
-    ax.set_yticklabels(["0.5", "0.6", "0.7", "0.8", "0.9"], fontsize=7)
-    ax.set_title("Radar: Per-Task Accuracy — All 6 Conditions", fontsize=13,
-                 fontweight="bold", pad=18)
-    ax.legend(loc="upper right", bbox_to_anchor=(1.32, 1.12), fontsize=8, framealpha=0.9)
-
-    fig.tight_layout()
-    fig.savefig(out, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved: {out.name}")
-
-
-def fig5_per_task_bars(df: pd.DataFrame, out: Path) -> None:
-    """8-panel figure: one bar cluster per task, showing all 6 conditions."""
-    n_tasks = len(TASKS)
-    n_cols = 4
-    n_rows = (n_tasks + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(14, n_rows * 3.5))
-    axes_flat = axes.flatten()
-
-    run_order = [(m, s) for s in SCOPES for m in METHODS]
-    run_labels = [f"{m.upper()}\n{s.replace('_', ' ')}" for m, s in run_order]
-    run_colors = [COLORS[m] for m, _ in run_order]
-    scope_alphas = {"full": 1.0, "attention_only": 0.7, "mlp_only": 0.45}
-
-    for i, task in enumerate(TASKS):
-        ax = axes_flat[i]
-        vals = []
-        for method, scope in run_order:
-            row = df[(df["method"] == method) & (df["scope"] == scope)]
-            vals.append(float(row[task].values[0]) if not row.empty else 0.0)
-
-        x = np.arange(len(run_order))
-        bar_colors = [COLORS[m] for m, _ in run_order]
-        bars = ax.bar(x, vals, color=bar_colors, edgecolor="white", linewidth=0.6)
-
-        for bar, val in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.005,
-                    f"{val:.2f}", ha="center", va="bottom", fontsize=6.5)
-
-        ax.set_title(TASK_LABELS[task], fontsize=10, fontweight="bold")
-        ax.set_xticks(x)
-        ax.set_xticklabels(run_labels, fontsize=6, rotation=45, ha="right")
-        lo = max(0, min(vals) - 0.05)
-        ax.set_ylim(lo, min(1.0, max(vals) + 0.07))
-        ax.set_ylabel("Accuracy", fontsize=8)
-
-    # Hide unused panels
-    for j in range(n_tasks, len(axes_flat)):
-        axes_flat[j].set_visible(False)
-
-    # Add legend
-    patches = [
-        mpatches.Patch(color=COLORS["lora"], label="LoRA"),
-        mpatches.Patch(color=COLORS["dora"], label="DoRA"),
-    ]
-    fig.legend(handles=patches, loc="lower right", fontsize=9, framealpha=0.9)
-    fig.suptitle("Per-Task Accuracy: All 6 Conditions", fontsize=14, fontweight="bold")
-    fig.tight_layout()
-    fig.savefig(out, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved: {out.name}")
+def fig4_delta_distribution(gains: pd.DataFrame, out: Path) -> None:
+    """Show whether each scope's DoRA gain is broad or task-specific."""
+    plot_df = to_long_gains(gains)
+    fig, ax = plt.subplots(figsize=(9.5, 5.2))
+    sns.boxplot(
+        data=plot_df,
+        x="scope_label",
+        y="delta_points",
+        color="#eef2f7",
+        width=0.48,
+        fliersize=0,
+        linewidth=1.1,
+        ax=ax,
+    )
+    sns.stripplot(
+        data=plot_df,
+        x="scope_label",
+        y="delta_points",
+        hue="task_label",
+        palette="tab10",
+        size=6,
+        jitter=0.22,
+        edgecolor="white",
+        linewidth=0.6,
+        ax=ax,
+    )
+    macro_points = gains.set_index("scope_label")["macro_average"] * 100
+    for index, scope_label in enumerate([SCOPE_LABELS[scope] for scope in SCOPES]):
+        if scope_label in macro_points:
+            ax.scatter(
+                index, macro_points[scope_label], marker="D", s=70, color="#111827", zorder=5
+            )
+            ax.text(index + 0.08, macro_points[scope_label], "macro", va="center", fontsize=8)
+    ax.axhline(0, color="#111827", linewidth=1.0)
+    ax.set_title("Distribution of Task-Level DoRA Gains")
+    ax.set_xlabel("")
+    ax.set_ylabel("DoRA - LoRA accuracy points")
+    ax.legend(title="Task", bbox_to_anchor=(1.01, 1.0), loc="upper left", frameon=True)
+    sns.despine(ax=ax)
+    _save(fig, out)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Summary tables
-# ─────────────────────────────────────────────────────────────────────────────
+def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
+    """Compare full-scope reproduction macro accuracy with the official reference."""
+    plot_df = comparison.copy()
+    plot_df["label"] = plot_df["source"].str.replace(" LLaMA2-7B", "\nLLaMA2-7B", regex=False)
+    fig, ax = plt.subplots(figsize=(9.2, 5.2))
+    sns.barplot(
+        data=plot_df,
+        x="label",
+        y="macro_points",
+        hue="method_label",
+        hue_order=["LoRA", "DoRA"],
+        palette=PALETTE,
+        edgecolor="white",
+        linewidth=1.0,
+        ax=ax,
+    )
+    for container in ax.containers:
+        ax.bar_label(container, fmt="%.1f", padding=3, fontsize=9)
+    ax.set_title("Full-Scope Macro Accuracy vs Official LLaMA2-7B Reference")
+    ax.set_xlabel("")
+    ax.set_ylabel("Macro-average accuracy (%)")
+    ax.set_ylim(72, 83)
+    ax.legend(title="", frameon=True, loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    sns.despine(ax=ax)
+    _save(fig, out)
 
-def print_summary(df: pd.DataFrame, gains: pd.DataFrame) -> None:
-    print("\n" + "═" * 70)
-    print("  SUMMARY TABLE — Macro-Average Accuracy")
-    print("═" * 70)
-    print(f"  {'Scope':<20} {'LoRA':>10} {'DoRA':>10} {'Δ (DoRA−LoRA)':>14}")
-    print("  " + "─" * 56)
-    for scope in SCOPES:
-        lora_row = df[(df["method"] == "lora") & (df["scope"] == scope)]
-        dora_row = df[(df["method"] == "dora") & (df["scope"] == scope)]
-        if lora_row.empty or dora_row.empty:
-            continue
-        lora_acc = float(lora_row["macro_average"].values[0])
-        dora_acc = float(dora_row["macro_average"].values[0])
-        delta = dora_acc - lora_acc
-        sign = "+" if delta >= 0 else ""
-        print(f"  {scope:<20} {lora_acc:>10.4f} {dora_acc:>10.4f} {sign+f'{delta:.4f}':>14}")
-    print("═" * 70)
 
-    if not gains.empty:
-        print("\n  ABLATION INSIGHT — Where does DoRA help most?")
-        print("  " + "─" * 56)
-        best_scope = gains.loc[gains["macro_average"].idxmax(), "scope"]
-        best_gain = gains["macro_average"].max()
-        print(f"  Largest macro gain: {best_scope} ({best_gain:+.4f})")
-        print("\n  Per-task DoRA gains by scope:")
-        for task in TASKS:
-            task_gains = {
-                row["scope"]: row[task]
-                for _, row in gains.iterrows()
-            }
-            best = max(task_gains, key=task_gains.get)
-            vals_str = "  ".join(f"{s[:4]}: {v:+.3f}" for s, v in task_gains.items())
-            print(f"    {TASK_LABELS[task]:<16} {vals_str}   ← best: {best}")
+def print_summary(scope_summary: pd.DataFrame, task_summary: pd.DataFrame) -> None:
+    """Print a compact console summary of the key analytical conclusions."""
+    print("\n" + "=" * 78)
+    print("  RESULT ANALYSIS: Macro-Average Accuracy and Task-Level Consistency")
+    print("=" * 78)
+    for row in scope_summary.itertuples(index=False):
+        print(
+            f"  {row.scope_label:<15} LoRA={row.lora_macro:.4f}  DoRA={row.dora_macro:.4f}  "
+            f"delta={row.delta_points:+.2f} pts  wins/ties/losses="
+            f"{row.task_wins}/{row.task_ties}/{row.task_losses}"
+        )
+        print(f"      best task: {row.best_task}; weakest task: {row.worst_task}")
+
+    best_scope = scope_summary.loc[scope_summary["delta_points"].idxmax()]
+    robust_scope = scope_summary.loc[scope_summary["task_wins"].idxmax()]
+    print("\n  Interpretation")
+    print("  " + "-" * 72)
+    print(
+        f"  Strongest macro reproduction: {best_scope['scope_label']} "
+        f"({best_scope['delta_points']:+.2f} accuracy points)."
+    )
+    print(
+        f"  Broadest task coverage: {robust_scope['scope_label']} "
+        f"({robust_scope['task_wins']} positive task deltas out of {len(TASKS)})."
+    )
+    positive_tasks = task_summary[task_summary["positive_scopes"] > 0]
+    print(
+        f"  DoRA improves at least one scope on {len(positive_tasks)}/{len(TASKS)} tasks; "
+        "attention-only is the least reliable isolation in these runs."
+    )
     print()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Main
-# ─────────────────────────────────────────────────────────────────────────────
+def write_tables(
+    out_dir: Path,
+    df: pd.DataFrame,
+    gains: pd.DataFrame,
+    scope_summary: pd.DataFrame,
+    task_summary: pd.DataFrame,
+    official_comparison: pd.DataFrame,
+) -> None:
+    """Write all analysis tables used by the README/report."""
+    df[["method", "scope", "macro_average", *TASKS]].to_csv(
+        out_dir / "summary_table.csv", index=False
+    )
+    gains[["scope", *TASKS, "macro_average"]].to_csv(out_dir / "dora_gains_table.csv", index=False)
+    scope_summary.to_csv(out_dir / "scope_summary.csv", index=False)
+    task_summary.to_csv(out_dir / "task_summary.csv", index=False)
+    official_comparison.to_csv(out_dir / "official_reference_comparison.csv", index=False)
+    print("  Saved: summary_table.csv")
+    print("  Saved: dora_gains_table.csv")
+    print("  Saved: scope_summary.csv")
+    print("  Saved: task_summary.csv")
+    print("  Saved: official_reference_comparison.csv")
+
+
+def generate_figures(
+    out_dir: Path,
+    df: pd.DataFrame,
+    gains: pd.DataFrame,
+    official_comparison: pd.DataFrame,
+) -> None:
+    """Generate the Seaborn figure suite."""
+    fig1_macro_grouped(df, out_dir / "fig1_macro_grouped.png")
+    fig2_heatmap(df, out_dir / "fig2_per_task_heatmap.png")
+    fig3_dora_gains(gains, out_dir / "fig3_dora_gains.png")
+    fig4_delta_distribution(gains, out_dir / "fig4_delta_distribution.png")
+    fig5_official_comparison(official_comparison, out_dir / "fig5_official_comparison.png")
+
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Analyse DoRA vs LoRA results.")
+    """Run the analysis script."""
+    parser = argparse.ArgumentParser(description="Analyze DoRA vs LoRA results.")
     parser.add_argument(
-        "--results", type=Path, default=None,
-        help="Path to results/runs/ directory containing */metrics.json files."
+        "--results",
+        type=Path,
+        default=None,
+        help="Path to results/runs/ containing */metrics.json files.",
     )
     parser.add_argument(
-        "--out", type=Path, default=Path("analysis_output"),
-        help="Directory to write figures and CSV tables (default: analysis_output/)."
+        "--out",
+        type=Path,
+        default=Path("analysis_output"),
+        help="Directory for figures and CSV tables.",
     )
     args = parser.parse_args()
+    _configure_plot_style()
 
     out_dir: Path = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
-    print(f"\nLoading results...")
-
+    print("\nLoading results...")
     df = load_results(args.results)
     gains = compute_gains(df)
+    scope_summary = build_scope_summary(df, gains)
+    task_summary = build_task_summary(gains)
+    official_comparison = build_official_comparison(df)
 
-    # ── CSV exports ──────────────────────────────────────────────────────────
-    summary_cols = ["method", "scope", "macro_average"] + TASKS
-    df[summary_cols].to_csv(out_dir / "summary_table.csv", index=False)
-    print(f"  Saved: summary_table.csv")
+    print("\nWriting analysis tables...")
+    write_tables(out_dir, df, gains, scope_summary, task_summary, official_comparison)
 
-    if not gains.empty:
-        gains.to_csv(out_dir / "dora_gains_table.csv", index=False)
-        print(f"  Saved: dora_gains_table.csv")
-
-    # ── Figures ──────────────────────────────────────────────────────────────
-    print("\nGenerating figures...")
-    fig1_macro_grouped(df, out_dir / "fig1_macro_grouped.png")
-    fig2_heatmap(df, out_dir / "fig2_per_task_heatmap.png")
-    if not gains.empty:
-        fig3_dora_gains(gains, out_dir / "fig3_dora_gains.png")
-    fig4_spider(df, out_dir / "fig4_spider.png")
-    fig5_per_task_bars(df, out_dir / "fig5_per_task_bars.png")
-
-    # ── Console summary ──────────────────────────────────────────────────────
-    print_summary(df, gains)
-    print(f"All outputs written to:  {out_dir.resolve()}\n")
+    print("\nGenerating Seaborn figures...")
+    generate_figures(out_dir, df, gains, official_comparison)
+    print_summary(scope_summary, task_summary)
+    print(f"All outputs written to: {out_dir.resolve()}\n")
 
 
 if __name__ == "__main__":

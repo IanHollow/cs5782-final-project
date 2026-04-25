@@ -216,6 +216,25 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+### Project generated artifacts
+# Local dataset/model caches and heavyweight experiment reruns.
+data/cache/
+data/hf-cache/
+.hf-cache/
+.huggingface/
+hf-cache/
+wandb/
+mlruns/
+
+# Fresh run outputs can be large; keep compact analysis artifacts committed.
+results/runs/
+results/smoke-test/
+analysis_output/
+
+# Course PDFs are deliverables and should remain trackable when added.
+!poster/*.pdf
+!report/*.pdf
+
 ### Jupyter Notebooks
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
