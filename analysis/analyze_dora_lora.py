@@ -43,7 +43,11 @@ SCOPE_LABELS = {
 }
 METHODS = ["lora", "dora"]
 METHOD_LABELS = {"lora": "LoRA", "dora": "DoRA"}
-PALETTE = {"LoRA": "#3569A8", "DoRA": "#D96C3B"}
+MICROSOFT_BLUE = "#0078D4"
+NVIDIA_GREEN = "#76B900"
+DARK_TEXT = "#17212F"
+GRID_COLOR = "#D7DEE8"
+PALETTE = {"LoRA": MICROSOFT_BLUE, "DoRA": NVIDIA_GREEN}
 
 OFFICIAL_LLAMA2_7B_REFERENCE = [
     {
@@ -85,20 +89,29 @@ CHECKED_IN_SUMMARY_PATH = Path("results/analysis/summary_table.csv")
 
 def _configure_plot_style() -> None:
     sns.set_theme(
-        context="paper",
+        context="notebook",
         style="whitegrid",
         font="DejaVu Sans",
         rc={
             "figure.dpi": 180,
-            "savefig.dpi": 220,
+            "savefig.dpi": 360,
             "axes.spines.top": False,
             "axes.spines.right": False,
             "axes.titleweight": "bold",
-            "axes.labelcolor": "#1f2933",
-            "text.color": "#1f2933",
-            "xtick.color": "#344054",
-            "ytick.color": "#344054",
-            "grid.color": "#d9dee8",
+            "axes.titlesize": 22,
+            "axes.labelsize": 17,
+            "axes.labelcolor": DARK_TEXT,
+            "text.color": DARK_TEXT,
+            "xtick.color": "#293548",
+            "ytick.color": "#293548",
+            "xtick.labelsize": 14,
+            "ytick.labelsize": 14,
+            "legend.fontsize": 14,
+            "legend.title_fontsize": 14,
+            "grid.color": GRID_COLOR,
+            "grid.linewidth": 1.15,
+            "figure.facecolor": "white",
+            "axes.facecolor": "white",
         },
     )
 
@@ -115,9 +128,10 @@ def _condition_label(method: str, scope: str) -> str:
     return f"{METHOD_LABELS[method]} - {SCOPE_LABELS[scope]}"
 
 
-def _save(fig: plt.Figure, out: Path) -> None:
-    fig.tight_layout()
-    fig.savefig(out, bbox_inches="tight")
+def _save(fig: plt.Figure, out: Path, *, tight: bool = True) -> None:
+    if tight:
+        fig.tight_layout()
+    fig.savefig(out, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"  Saved: {out.name}")
 
@@ -289,7 +303,7 @@ def fig1_macro_grouped(df: pd.DataFrame, out: Path) -> None:
     """Grouped Seaborn bar chart of macro-average accuracy by method and scope."""
     plot_df = df.copy()
     plot_df["macro_points"] = plot_df["macro_average"] * 100
-    fig, ax = plt.subplots(figsize=(9.5, 5.2))
+    fig, ax = plt.subplots(figsize=(11.5, 6.4))
     sns.barplot(
         data=plot_df,
         x="scope_label",
@@ -302,12 +316,15 @@ def fig1_macro_grouped(df: pd.DataFrame, out: Path) -> None:
         ax=ax,
     )
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.1f", padding=3, fontsize=9)
+        ax.bar_label(container, fmt="%.1f", padding=4, fontsize=13, fontweight="bold")
     ax.set_title("Macro-Average Accuracy by Adapter Scope")
     ax.set_xlabel("")
     ax.set_ylabel("Macro-average accuracy (%)")
     ax.set_ylim(72, 82.5)
     ax.legend(title="", frameon=True, loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    ax.tick_params(axis="x", labelsize=15)
+    ax.tick_params(axis="y", labelsize=14)
+    ax.grid(axis="x", visible=False)
     sns.despine(ax=ax)
     _save(fig, out)
 
@@ -319,23 +336,31 @@ def fig2_heatmap(df: pd.DataFrame, out: Path) -> None:
         index="condition", columns="task_label", values="accuracy_pct", aggfunc="first"
     )
     heatmap_df = heatmap_df[[TASK_LABELS[task] for task in TASKS]]
-    fig, ax = plt.subplots(figsize=(13, 5.8))
+    fig, (ax, cax) = plt.subplots(
+        ncols=2,
+        figsize=(15.8, 6.3),
+        gridspec_kw={"width_ratios": [35, 1], "wspace": 0.05},
+    )
     sns.heatmap(
         heatmap_df,
-        cmap="YlGnBu",
+        cmap=sns.light_palette(NVIDIA_GREEN, as_cmap=True),
         annot=True,
         fmt=".1f",
+        annot_kws={"fontsize": 10.5, "fontweight": "bold"},
         linewidths=0.6,
         linecolor="white",
-        cbar_kws={"label": "Accuracy (%)", "shrink": 0.82},
+        cbar_ax=cax,
+        cbar_kws={"label": "Accuracy (%)"},
         ax=ax,
     )
     ax.set_title("Per-Task Accuracy Across All Conditions")
     ax.set_xlabel("")
     ax.set_ylabel("")
-    ax.tick_params(axis="x", rotation=30)
-    ax.tick_params(axis="y", rotation=0)
-    _save(fig, out)
+    ax.tick_params(axis="x", rotation=28, labelsize=12)
+    ax.tick_params(axis="y", rotation=0, labelsize=12)
+    cax.tick_params(labelsize=11)
+    cax.yaxis.label.set_size(13)
+    _save(fig, out, tight=False)
 
 
 def fig3_dora_gains(gains: pd.DataFrame, out: Path) -> None:
@@ -345,38 +370,47 @@ def fig3_dora_gains(gains: pd.DataFrame, out: Path) -> None:
         index="scope_label", columns="task_label", values="delta_points", aggfunc="first"
     )
     heatmap_df = heatmap_df[[TASK_LABELS[task] for task in TASKS]]
-    fig, ax = plt.subplots(figsize=(13, 4.2))
+    cmap = sns.diverging_palette(245, 120, s=85, l=55, center="light", as_cmap=True)
+    fig, (ax, cax) = plt.subplots(
+        ncols=2,
+        figsize=(15.8, 5.3),
+        gridspec_kw={"width_ratios": [35, 1], "wspace": 0.05},
+    )
     sns.heatmap(
         heatmap_df,
-        cmap="vlag",
+        cmap=cmap,
         center=0,
         annot=True,
         fmt="+.1f",
+        annot_kws={"fontsize": 12, "fontweight": "bold"},
         linewidths=0.6,
         linecolor="white",
-        cbar_kws={"label": "DoRA - LoRA accuracy points", "shrink": 0.78},
+        cbar_ax=cax,
+        cbar_kws={"label": "DoRA - LoRA accuracy points"},
         ax=ax,
     )
     ax.set_title("Task-Level DoRA Gains by Adapter Scope")
     ax.set_xlabel("")
     ax.set_ylabel("")
-    ax.tick_params(axis="x", rotation=30)
-    ax.tick_params(axis="y", rotation=0)
-    _save(fig, out)
+    ax.tick_params(axis="x", rotation=28, labelsize=13)
+    ax.tick_params(axis="y", rotation=0, labelsize=13)
+    cax.tick_params(labelsize=11)
+    cax.yaxis.label.set_size(13)
+    _save(fig, out, tight=False)
 
 
 def fig4_delta_distribution(gains: pd.DataFrame, out: Path) -> None:
     """Show whether each scope's DoRA gain is broad or task-specific."""
     plot_df = to_long_gains(gains)
-    fig, ax = plt.subplots(figsize=(9.5, 5.2))
+    fig, ax = plt.subplots(figsize=(11.5, 6.4))
     sns.boxplot(
         data=plot_df,
         x="scope_label",
         y="delta_points",
-        color="#eef2f7",
+        color="#EEF7E3",
         width=0.48,
         fliersize=0,
-        linewidth=1.1,
+        linewidth=1.35,
         ax=ax,
     )
     sns.stripplot(
@@ -384,24 +418,33 @@ def fig4_delta_distribution(gains: pd.DataFrame, out: Path) -> None:
         x="scope_label",
         y="delta_points",
         hue="task_label",
-        palette="tab10",
-        size=6,
+        palette="colorblind",
+        size=6.5,
         jitter=0.22,
         edgecolor="white",
-        linewidth=0.6,
+        linewidth=0.8,
         ax=ax,
     )
     macro_points = gains.set_index("scope_label")["macro_average"] * 100
     for index, scope_label in enumerate([SCOPE_LABELS[scope] for scope in SCOPES]):
         if scope_label in macro_points:
             ax.scatter(
-                index, macro_points[scope_label], marker="D", s=70, color="#111827", zorder=5
+                index, macro_points[scope_label], marker="D", s=110, color=DARK_TEXT, zorder=5
             )
-            ax.text(index + 0.08, macro_points[scope_label], "macro", va="center", fontsize=8)
-    ax.axhline(0, color="#111827", linewidth=1.0)
+            ax.text(
+                index + 0.08,
+                macro_points[scope_label],
+                "macro",
+                va="center",
+                fontsize=10,
+                fontweight="bold",
+            )
+    ax.axhline(0, color=DARK_TEXT, linewidth=1.4)
     ax.set_title("Distribution of Task-Level DoRA Gains")
     ax.set_xlabel("")
     ax.set_ylabel("DoRA - LoRA accuracy points")
+    ax.tick_params(axis="x", labelsize=15)
+    ax.tick_params(axis="y", labelsize=14)
     ax.legend(title="Task", bbox_to_anchor=(1.01, 1.0), loc="upper left", frameon=True)
     sns.despine(ax=ax)
     _save(fig, out)
@@ -411,7 +454,7 @@ def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
     """Compare full-scope reproduction macro accuracy with the official reference."""
     plot_df = comparison.copy()
     plot_df["label"] = plot_df["source"].str.replace(" Table 1 ", "\nTable 1 ", regex=False)
-    fig, ax = plt.subplots(figsize=(9.2, 5.2))
+    fig, ax = plt.subplots(figsize=(11.5, 6.4))
     sns.barplot(
         data=plot_df,
         x="label",
@@ -424,12 +467,15 @@ def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
         ax=ax,
     )
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.1f", padding=3, fontsize=9)
+        ax.bar_label(container, fmt="%.1f", padding=4, fontsize=13, fontweight="bold")
     ax.set_title("Full-Scope Macro Accuracy vs Official LLaMA2-7B Reference")
     ax.set_xlabel("")
     ax.set_ylabel("Macro-average accuracy (%)")
     ax.set_ylim(72, 83)
     ax.legend(title="", frameon=True, loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    ax.tick_params(axis="x", labelsize=14)
+    ax.tick_params(axis="y", labelsize=14)
+    ax.grid(axis="x", visible=False)
     sns.despine(ax=ax)
     _save(fig, out)
 
