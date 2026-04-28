@@ -43,9 +43,9 @@
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.08}
 
-\newcommand{\tightcaption}[1]{%
+\newcommand{\tightcaption}[2]{%
   \vspace{-0.7ex}%
-  \par\noindent{\footnotesize\RaggedRight\textbf{Figure.} #1\par}%
+  \par\noindent{\footnotesize\RaggedRight\textbf{Figure #1.} #2\par}%
   \vspace{0.6ex}%
 }
 
@@ -105,6 +105,7 @@ Full fine-tuning large language models is expensive in memory, storage, and trai
 
 \heading{Project goal}
 \begin{itemize}
+  \item Central question: does \dora{} improve commonsense reasoning accuracy over a same-scope \lora{} baseline?
   \item Reproduce the paper's LLaMA2-7B commonsense reasoning trend.
   \item Test whether \dora{} helps most in attention layers, MLP layers, or only when applied broadly.
 \end{itemize}
@@ -121,14 +122,15 @@ Full fine-tuning large language models is expensive in memory, storage, and trai
 
 \heading{Implementation}
 \begin{itemize}
-  \item Repo-owned PyTorch \lora{} and \dora{} adapter layers.
-  \item Hugging Face \texttt{transformers} model/tokenizer loading and generation.
+  \item From-scratch PyTorch \lora{} and \dora{} adapter layers injected into Hugging Face model modules.
   \item Frozen base model, adapter-only checkpoints, 3 epochs, cutoff length 256.
-  \item Colab-focused 4-bit NF4 runtime presets for T4, L4, and A100 GPUs.
+  \item 4-bit NF4 Colab runtime presets for T4, L4, and A100 GPUs.
 \end{itemize}
+
+\resultnote{Controlled comparison}{Same model, 15k data subset, tasks, prompt/eval pipeline, seed 42, and adapter-only training. Paper-style method settings: \lora{} r=32, LR=3e-4; rank-halved \dora{} r=16, LR=2e-4.}
 \end{block}
 
-\begin{block}{Independent Scope Ablation}
+\begin{block}{Our Independent Experiment: Scope Ablation}
 \small
 \begin{tabularx}{\linewidth}{>{\bfseries}l X X}
 \toprule
@@ -142,7 +144,7 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 \normalsize
 
 \vspace{0.8ex}
-\resultnote{Design}{Each scope compares matched \lora{} and \dora{} adapters under the same evaluation pipeline.}
+\resultnote{Design}{Each scope compares same-scope \lora{} and \dora{} adapters under the same evaluation pipeline.}
 \end{block}
 
 \end{column}
@@ -161,23 +163,23 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 \renewcommand{\arraystretch}{1.0}
 \begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X@{}}
 \headlineMetric{77.41\%}{Full \lora{} macro} &
-\headlineMetric{79.20\%}{Full \dora{} macro} &
+\headlineMetric{79.20\%}{Full rank-halved \dora{} macro} &
 \headlineMetric{+1.79}{accuracy points} &
-\headlineMetric{6/1/1}{wins/ties/losses}
+\headlineMetric{6/1/1}{task wins/ties/losses}
 \end{tabularx}
 \endgroup
 \vspace{0.8ex}
 \begin{center}
 \begin{minipage}{0.94\linewidth}
 \centering\footnotesize
-Full-scope \dora{} reproduced the paper's qualitative improvement over \lora{} under our student-scale setup.
+Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's qualitative improvement over \lora{} under our student-scale setup.
 \end{minipage}
 \end{center}
 \end{alertblock}
 
 \begin{block}{Macro Accuracy by Adapter Scope}
 \includegraphics[width=0.98\linewidth]{fig1_macro_grouped.png}
-\tightcaption{Full-scope \dora{} improves macro accuracy from 77.4\% to 79.2\%. Attention-only \dora{} does not improve over its matched \lora{} baseline.}
+\tightcaption{1}{Full-scope, rank-halved \dora{} improves macro accuracy from 77.4\% to 79.2\%. Attention-only \dora{} does not improve over its same-scope \lora{} baseline.}
 
 \vspace{0.8ex}
 \small
@@ -197,8 +199,9 @@ MLP only & 79.05\% & \textbf{79.20\%} & +0.15 \\
 
 \begin{block}{Where Does DoRA Help?}
 \includegraphics[width=0.98\linewidth]{fig3_dora_gains.png}
-\tightcaption{Task-level \dora{} minus \lora{} gains. Full-scope \dora{} improves 6/8 tasks, ties Social IQA, and slightly loses on WinoGrande.}
+\tightcaption{2}{Task-level \dora{} minus \lora{} gains. Full-scope \dora{} improves 6/8 tasks, ties Social IQA, and slightly loses on WinoGrande.}
 \resultnote{Largest full-scope gains}{HellaSwag +6.0, ARC-Challenge +3.7, OpenBookQA +2.4 accuracy points.}
+\resultnote{Takeaway}{\dora{}'s benefit appears scope-dependent, not automatic.}
 \end{block}
 
 \end{column}
@@ -213,16 +216,15 @@ MLP only & 79.05\% & \textbf{79.20\%} & +0.15 \\
 
 \begin{block}{Official Reference Context}
 \includegraphics[width=0.98\linewidth]{fig5_official_comparison.png}
-\tightcaption{Our result matches the paper's direction of improvement, but the absolute \dora{} score remains below the official LLaMA2-7B reference.}
+\tightcaption{3}{Our result matches the paper's direction: rank-halved \dora{} improves over \lora{}, but our 79.2\% \dora{} score remains below the official 80.5\% reference.}
 \end{block}
 
 \begin{exampleblock}{Interpretation}
 \begin{itemize}
   \item The main paper-level claim \textbf{partially reproduced}: full-scope \dora{} beat full-scope \lora{}.
-  \item Gains were not uniform across isolated module groups.
-  \item Attention-only \dora{} underperformed attention-only \lora{} on 7/8 tasks.
-  \item MLP-only \dora{} was roughly tied overall: ARC gains were offset by drops on PIQA, Social IQA, HellaSwag, and OpenBookQA.
-  \item Best hypothesis: \dora{}'s magnitude/direction split works best when attention and MLP transformations can adapt together.
+  \item Scope ablations show the gain was \textbf{not automatic}: attention-only \dora{} underperformed \lora{} on 7/8 tasks; MLP-only \dora{} was roughly tied.
+  \item Best hypothesis: \dora{}'s magnitude/direction split works best when attention and MLP transformations adapt together.
+  \item Key limitations: 15k subset instead of full data, seed 42 only, quantized Colab runs, and a local implementation rather than the exact official recipe.
 \end{itemize}
 \end{exampleblock}
 
@@ -238,9 +240,7 @@ MLP only & 79.05\% & \textbf{79.20\%} & +0.15 \\
 \begin{itemize}
   \item Train on the full \texttt{commonsense\_170k.json} dataset.
   \item Repeat all six conditions across multiple random seeds.
-  \item Test Llama-3-8B and larger Llama-family models.
-  \item Add parameter-count, GPU-memory, and wall-clock comparisons.
-  \item Analyze wrong answers by task, especially HellaSwag, ARC-Challenge, and OpenBookQA.
+  \item Add parameter-count, GPU-memory, and wall-clock cost comparisons.
 \end{itemize}
 \end{block}
 

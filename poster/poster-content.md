@@ -5,14 +5,14 @@ Cornell University - CS 5782 / CS 4782 Intro to Deep Learning
 
 ## Main Takeaway
 
-Full-scope DoRA reproduced the paper's core trend by improving over LoRA on Llama-2-7B commonsense reasoning, but our ablations show the gain depends strongly on where adapters are applied.
+Full-scope, rank-halved DoRA reproduced the paper's core trend by improving over LoRA on Llama-2-7B commonsense reasoning, but our ablations show the gain depends strongly on where adapters are applied.
 
 ## Motivation
 
 - Full fine-tuning large language models is expensive in memory, storage, and training time.
 - LoRA reduces cost by training low-rank adapter updates while freezing the base model.
 - The limitation: a low-rank update alone may not fully capture how pretrained weights should change.
-- Our goal: test whether DoRA improves commonsense reasoning accuracy over a matched LoRA baseline.
+- Our goal: test whether DoRA improves commonsense reasoning accuracy over a same-scope LoRA baseline.
 - Our added question: does DoRA help more in attention layers, MLP layers, or only when applied broadly?
 
 ## Paper Idea
@@ -29,8 +29,9 @@ Full-scope DoRA reproduced the paper's core trend by improving over LoRA on Llam
 - Training data: `data/commonsense_15k.json`, a student-scale subset of the larger commonsense training set.
 - Evaluation tasks: BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, OpenBookQA.
 - Metrics: per-task accuracy and macro-average accuracy across all eight tasks.
-- Implementation: repo-owned PyTorch LoRA and DoRA adapter layers wrapped around Hugging Face `transformers` linear modules.
+- Implementation: from-scratch PyTorch LoRA and DoRA adapter layers injected into Hugging Face model modules.
 - Training setup: frozen base model, adapter-only checkpoints, 3 epochs, sequence cutoff 256, deterministic generation-based evaluation.
+- Controlled comparison: all LoRA/DoRA runs used the same model, 15k data subset, tasks, prompt/eval pipeline, seed 42, and adapter-only training. Method-specific settings followed the paper-style config: LoRA r=32, LR=3e-4; rank-halved DoRA r=16, LR=2e-4.
 - Colab setup: 4-bit NF4 quantized runtime presets for T4, L4, and A100 GPUs.
 
 ## Experiments
@@ -47,15 +48,15 @@ We compared LoRA and DoRA under matched adapter scopes:
 
 ![Macro-average accuracy by adapter scope](../results/analysis/fig1_macro_grouped.png)
 
-**Figure 1.** DoRA improves full-scope macro accuracy from **77.4% to 79.2%**, but does not improve the attention-only setting.
+**Figure 1.** Rank-halved DoRA improves full-scope macro accuracy from **77.4% to 79.2%**, but does not improve over the same-scope LoRA baseline in the attention-only setting.
 
 ![Task-level DoRA gains by adapter scope](../results/analysis/fig3_dora_gains.png)
 
-**Figure 2.** Full-scope DoRA improves **6/8 tasks**, ties Social IQA, and slightly loses on WinoGrande. The largest full-scope gains are HellaSwag **+6.0**, ARC-Challenge **+3.7**, and OpenBookQA **+2.4** accuracy points.
+**Figure 2.** Full-scope DoRA improves **6/8 tasks**, ties Social IQA, and slightly loses on WinoGrande. The largest full-scope gains are HellaSwag **+6.0**, ARC-Challenge **+3.7**, and OpenBookQA **+2.4** accuracy points. DoRA's benefit appears scope-dependent, not automatic.
 
 ![Full-scope macro accuracy vs official LLaMA2-7B reference](../results/analysis/fig5_official_comparison.png)
 
-**Figure 3.** Our reproduction captures the paper's direction of improvement, but our DoRA result is below the official LLaMA2-7B DoRA reference.
+**Figure 3.** Our reproduction captures the paper's direction: rank-halved DoRA improves over LoRA, but our 79.2% DoRA score remains below the official 80.5% reference.
 
 | Adapter Scope | LoRA Macro Accuracy | DoRA Macro Accuracy | DoRA - LoRA |
 | --- | ---: | ---: | ---: |
@@ -66,10 +67,10 @@ We compared LoRA and DoRA under matched adapter scopes:
 ## Interpretation
 
 - The main paper-level claim partially reproduced: DoRA beat LoRA in the full adapter setting.
-- DoRA's gain was not uniform across isolated module groups.
-- Attention-only DoRA underperformed attention-only LoRA on 7/8 tasks.
-- MLP-only DoRA was roughly tied overall, with strong ARC-Challenge and ARC-Easy gains offset by PIQA, Social IQA, HellaSwag, and OpenBookQA drops.
+- DoRA's gain was not automatic across isolated module groups.
+- Attention-only DoRA underperformed attention-only LoRA on 7/8 tasks; MLP-only DoRA was roughly tied overall.
 - Best hypothesis: DoRA's magnitude/direction split is most useful when both attention and MLP transformations can adjust together.
+- Key limitations: 15k subset instead of full data, seed 42 only, quantized Colab runs, and a local implementation rather than the exact official recipe.
 
 ## Conclusion
 
@@ -83,10 +84,7 @@ We compared LoRA and DoRA under matched adapter scopes:
 
 - Train on the full `commonsense_170k.json` dataset instead of the 15k subset.
 - Repeat all six conditions across multiple random seeds.
-- Test Llama-3-8B and larger Llama-family models.
 - Report trainable parameter counts, GPU memory, and wall-clock time for each condition.
-- Investigate why attention-only DoRA loses accuracy despite strong attention-only LoRA results.
-- Analyze generated wrong answers by task, especially HellaSwag, ARC-Challenge, and OpenBookQA.
 
 ## References
 

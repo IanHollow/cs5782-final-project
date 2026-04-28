@@ -6,7 +6,7 @@ This GitHub repository contains our CS 4782/5782 final project reimplementation 
 
 ## Chosen Result
 
-We reproduced the paper's commonsense reasoning result from Table 1 / the official NVlabs commonsense table: DoRA should improve average accuracy over a matched LoRA baseline on BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, and OpenBookQA. We also added attention-only and MLP-only ablations to test where the DoRA update helps most.
+We reproduced the paper's commonsense reasoning result from Table 1 / the official NVlabs commonsense table: rank-halved DoRA should improve average accuracy over a same-scope LoRA baseline on BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, and OpenBookQA. We also added attention-only and MLP-only ablations to test where the DoRA update helps most.
 
 ## GitHub Contents
 
@@ -62,7 +62,7 @@ uv run pytest
 
 ## Results/Insights
 
-Our checked-in Llama-2-7B reproduction results are in `results/analysis/summary_table.csv`, with a deeper breakdown in `results/analysis/scope_summary.csv` and `results/analysis/task_summary.csv`. Full-scope DoRA improves over LoRA from `0.7741` to `0.7920` macro accuracy, a gain of about `+1.79` points across six positive task deltas, one tie, and one loss; attention-only DoRA underperforms LoRA by about `-1.50` points; MLP-only DoRA is roughly tied, at about `+0.15` points.
+Our checked-in Llama-2-7B reproduction results are in `results/analysis/summary_table.csv`, with a deeper breakdown in `results/analysis/scope_summary.csv` and `results/analysis/task_summary.csv`. Full-scope, rank-halved DoRA improves over LoRA from `0.7741` to `0.7920` macro accuracy, a gain of about `+1.79` points across six positive task deltas, one tie, and one loss; attention-only DoRA underperforms LoRA by about `-1.50` points; MLP-only DoRA is roughly tied, at about `+0.15` points.
 
 ![Macro accuracy by method and scope](results/analysis/fig1_macro_grouped.png)
 
