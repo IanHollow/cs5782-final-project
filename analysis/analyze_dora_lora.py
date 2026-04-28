@@ -317,7 +317,7 @@ def fig1_macro_grouped(df: pd.DataFrame, out: Path) -> None:
     )
     for container in ax.containers:
         ax.bar_label(container, fmt="%.1f", padding=4, fontsize=13, fontweight="bold")
-    ax.set_title("Macro-Average Accuracy by Adapter Scope")
+    ax.set_title("")
     ax.set_xlabel("")
     ax.set_ylabel("Macro-average accuracy (%)")
     ax.set_ylim(72, 82.5)

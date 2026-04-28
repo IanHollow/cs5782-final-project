@@ -53,6 +53,13 @@
   \par\noindent{\footnotesize\RaggedRight\textbf{#1.} #2\par}%
 }
 
+\newcommand{\headlineMetric}[2]{%
+  \begin{tabular}[t]{@{}c@{}}
+    {\Huge\bfseries #1}\\[-0.25ex]
+    {\footnotesize #2}
+  \end{tabular}%
+}
+
 \newcommand{\shortcite}[1]{\raisebox{0.65ex}{\scriptsize\cite{#1}}}
 \newcommand{\dora}{\textcolor{NvidiaGreenDark}{\textbf{DoRA}}}
 \newcommand{\lora}{\textcolor{MicrosoftBlue}{\textbf{LoRA}}}
@@ -65,7 +72,14 @@
 \author{Ian Holloway \and Younghyun Jung \and Swathi Selvam \and Shashwat Modi}
 \institute{Cornell University \samelineand CS 5782 / CS 4782 Intro to Deep Learning}
 
-\footercontent{Llama-2-7B commonsense reasoning reproduction \hfill \dora{} = Nvidia green, \lora{} = Microsoft blue \hfill 36 in x 24 in}
+\footercontent{%
+  \small
+  \makebox[\dimexpr\paperwidth-2\sepwidth\relax]{%
+    \makebox[0pt][l]{DoRA Reproduction}%
+    \hfill Cornell CS 5782 / CS 4782\hfill%
+    \makebox[0pt][r]{Llama-2-7B \textbar{} Commonsense Reasoning}%
+  }%
+}
 
 \begin{document}
 
@@ -142,22 +156,23 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 \begin{column}{\colwidth}
 
 \begin{alertblock}{Headline Result}
-\begin{columns}[T,totalwidth=\linewidth]
-\begin{column}{0.24\linewidth}
-\centering{\Huge\bfseries 77.41\%}\par{\footnotesize Full \lora{} macro}
-\end{column}
-\begin{column}{0.24\linewidth}
-\centering{\Huge\bfseries 79.20\%}\par{\footnotesize Full \dora{} macro}
-\end{column}
-\begin{column}{0.24\linewidth}
-\centering{\Huge\bfseries +1.79}\par{\footnotesize accuracy points}
-\end{column}
-\begin{column}{0.24\linewidth}
-\centering{\Huge\bfseries 6/1/1}\par{\footnotesize wins/ties/losses}
-\end{column}
-\end{columns}
+\begingroup
+\setlength{\tabcolsep}{0pt}
+\renewcommand{\arraystretch}{1.0}
+\begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X@{}}
+\headlineMetric{77.41\%}{Full \lora{} macro} &
+\headlineMetric{79.20\%}{Full \dora{} macro} &
+\headlineMetric{+1.79}{accuracy points} &
+\headlineMetric{6/1/1}{wins/ties/losses}
+\end{tabularx}
+\endgroup
 \vspace{0.8ex}
-\centering{\footnotesize Full-scope \dora{} reproduced the paper's qualitative improvement over \lora{} under our student-scale setup.\par}
+\begin{center}
+\begin{minipage}{0.94\linewidth}
+\centering\footnotesize
+Full-scope \dora{} reproduced the paper's qualitative improvement over \lora{} under our student-scale setup.
+\end{minipage}
+\end{center}
 \end{alertblock}
 
 \begin{block}{Macro Accuracy by Adapter Scope}
