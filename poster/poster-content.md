@@ -38,6 +38,8 @@ Full-scope, rank-halved DoRA reproduced the paper's core trend by improving over
 
 We compared LoRA and DoRA under matched adapter scopes:
 
+Motivation: this ablation tests whether DoRA's gain comes from attention layers, MLP layers, or coordinated updates across both.
+
 | Scope | Target Modules | Purpose |
 | --- | --- | --- |
 | Full | `q_proj`, `k_proj`, `v_proj`, `up_proj`, `down_proj` | Paper-level reproduction setting |
@@ -69,7 +71,7 @@ We compared LoRA and DoRA under matched adapter scopes:
 - The main paper-level claim partially reproduced: DoRA beat LoRA in the full adapter setting.
 - DoRA's gain was not automatic across isolated module groups.
 - Attention-only DoRA underperformed attention-only LoRA on 7/8 tasks; MLP-only DoRA was roughly tied overall.
-- Best hypothesis: DoRA's magnitude/direction split is most useful when both attention and MLP transformations can adjust together.
+- Key takeaway: DoRA appears most useful when attention and MLP transformations adapt together, not as a narrow drop-in replacement for one module group.
 - Key limitations: 15k subset instead of full data, seed 42 only, quantized Colab runs, and a local implementation rather than the exact official recipe.
 
 ## Conclusion

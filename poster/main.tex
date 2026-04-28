@@ -144,6 +144,7 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 \normalsize
 
 \vspace{0.8ex}
+\resultnote{Motivation}{This ablation tests whether \dora{}'s gain comes from attention layers, MLP layers, or coordinated updates across both.}
 \resultnote{Design}{Each scope compares same-scope \lora{} and \dora{} adapters under the same evaluation pipeline.}
 \end{block}
 
@@ -223,7 +224,7 @@ MLP only & 79.05\% & \textbf{79.20\%} & +0.15 \\
 \begin{itemize}
   \item The main paper-level claim \textbf{partially reproduced}: full-scope \dora{} beat full-scope \lora{}.
   \item Scope ablations show the gain was \textbf{not automatic}: attention-only \dora{} underperformed \lora{} on 7/8 tasks; MLP-only \dora{} was roughly tied.
-  \item Best hypothesis: \dora{}'s magnitude/direction split works best when attention and MLP transformations adapt together.
+  \item Key takeaway: \dora{} appears most useful when attention and MLP transformations adapt together, not as a replacement for one module group.
   \item Key limitations: 15k subset instead of full data, seed 42 only, quantized Colab runs, and a local implementation rather than the exact official recipe.
 \end{itemize}
 \end{exampleblock}
