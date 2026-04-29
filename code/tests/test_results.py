@@ -27,7 +27,19 @@ def test_summarize_runs_writes_csv_and_plot(tmp_path: Path) -> None:
             "macro_average": 0.5,
         },
     )
+    write_json(
+        run_dir / "run.metadata.json",
+        {
+            "trainable_parameters": 100,
+            "total_parameters": 1000,
+        },
+    )
     csv_path, figure_path = summarize_runs(tmp_path / "runs", tmp_path / "summary")
     assert csv_path.is_file()
     assert figure_path is not None
     assert figure_path.is_file()
+    
+    content = csv_path.read_text(encoding="utf-8")
+    assert "trainable_percentage" in content
+    assert "10.0" in content
+

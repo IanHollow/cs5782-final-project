@@ -262,6 +262,10 @@ def run_training(
     )
     write_snapshot(output_dir / "config.snapshot.toml", spec)
     model, tokenizer = load_model_and_tokenizer(spec)
+    
+    trainable_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total_parameters = sum(p.numel() for p in model.parameters())
+    
     train_dataset, eval_dataset = _prepare_dataset(spec, tokenizer)
     run_logger.info(
         "Prepared tokenized datasets",
@@ -324,6 +328,8 @@ def run_training(
         "adapter": asdict(spec.adapter),
         "model_id": spec.model.model_id,
         "runtime": asdict(spec.runtime),
+        "trainable_parameters": trainable_parameters,
+        "total_parameters": total_parameters,
     }
     (output_dir / "run.metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     run_logger.info("Saved adapter artifacts", extra={"adapter_dir": adapter_dir})

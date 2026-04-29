@@ -83,7 +83,7 @@ def _parse_task_selection(raw: Sequence[str] | str | None) -> tuple[str, ...] | 
         raise ValueError(msg) from error
 
 
-def _resolve_train_settings(args: Namespace) -> dict[str, str | Path | None]:
+def _resolve_train_settings(args: Namespace) -> dict[str, str | Path | int | None]:
     model = _resolve_value(args.model, "MODEL", "llama2_7b")
     method = cast(
         "AdapterMethod",
@@ -97,6 +97,8 @@ def _resolve_train_settings(args: Namespace) -> dict[str, str | Path | None]:
     experiment = _resolve_value(args.experiment, "EXPERIMENT", "default")
     train_data_path = args.train_data_path or _env_value("TRAIN_DATA_PATH")
     run_name = args.run_name or _env_value("RUN_NAME")
+    rank_env = _env_value("RANK")
+    rank = args.rank if args.rank is not None else (int(rank_env) if rank_env else None)
     return {
         "model": model,
         "method": method,
@@ -105,6 +107,7 @@ def _resolve_train_settings(args: Namespace) -> dict[str, str | Path | None]:
         "experiment": experiment,
         "train_data_path": _repo_path(train_data_path) if train_data_path else None,
         "run_name": run_name,
+        "rank": rank,
     }
 
 
@@ -154,6 +157,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--output-dir", default="results/runs")
     train.add_argument("--run-name", default=None)
     train.add_argument("--resume-from-checkpoint", default=None)
+    train.add_argument("--rank", type=int, default=None)
 
     evaluate = subparsers.add_parser("evaluate")
     evaluate.add_argument("--run-dir", required=True)
@@ -240,6 +244,7 @@ def _train_command(args: Namespace, logger: logging.Logger) -> int:
     runtime_name = str(resolved["runtime"])
     experiment_name = str(resolved["experiment"])
     train_data_path = resolved["train_data_path"]
+    rank = cast("int | None", resolved.get("rank"))
     run_name = cast(
         "str | None",
         resolved["run_name"],
@@ -268,6 +273,7 @@ def _train_command(args: Namespace, logger: logging.Logger) -> int:
         runtime_name=runtime_name,
         experiment_name=experiment_name,
         train_data_path=cast("Path | None", train_data_path),
+        override_rank=rank,
     )
     resume_from_checkpoint = (
         _repo_path(args.resume_from_checkpoint) if args.resume_from_checkpoint else None

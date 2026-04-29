@@ -69,6 +69,17 @@ def summarize_runs(results_dir: Path, output_dir: Path) -> tuple[Path, Path | No
     rows: list[dict[str, Any]] = []
     for metrics_path in sorted(results_dir.glob("*/metrics.json")):
         metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+        
+        metadata_path = metrics_path.parent / "run.metadata.json"
+        if metadata_path.exists():
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            if "trainable_parameters" in metadata and "total_parameters" in metadata:
+                trainable = metadata["trainable_parameters"]
+                total = metadata["total_parameters"]
+                metrics["trainable_parameters"] = trainable
+                metrics["total_parameters"] = total
+                metrics["trainable_percentage"] = (trainable / total) * 100 if total > 0 else 0.0
+                
         rows.append(metrics)
 
     csv_path = output_dir / "summary.csv"

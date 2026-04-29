@@ -217,6 +217,10 @@ def test_run_training_saves_local_adapter_checkpoint(tmp_path: Path, method: str
     assert (adapter_dir / "adapter_model.safetensors").is_file()
     assert (adapter_dir / "tokenizer.json").is_file()
 
+    metadata = json.loads((run_dir / "run.metadata.json").read_text(encoding="utf-8"))
+    assert "trainable_parameters" in metadata
+    assert "total_parameters" in metadata
+
     reloaded = LlamaForCausalLM.from_pretrained(spec.model.model_id)
     attach_adapter(reloaded, spec.adapter)
     load_adapter_checkpoint(reloaded, adapter_dir)

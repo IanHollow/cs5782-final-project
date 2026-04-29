@@ -41,6 +41,7 @@ def test_resolve_train_settings_uses_env_for_lora_attention_only(
             experiment=None,
             train_data_path=None,
             run_name=None,
+            rank=None,
         )
     )
     assert resolved["method"] == "lora"
@@ -64,6 +65,7 @@ def test_resolve_train_settings_uses_env_for_dora_mlp_only(
             experiment=None,
             train_data_path=None,
             run_name=None,
+            rank=None,
         )
     )
     assert resolved["model"] == "llama3_8b"
@@ -85,6 +87,7 @@ def test_resolve_train_settings_cli_overrides_conflicting_env(
             experiment=None,
             train_data_path=None,
             run_name=None,
+            rank=None,
         )
     )
     assert resolved["model"] == "llama3_8b"

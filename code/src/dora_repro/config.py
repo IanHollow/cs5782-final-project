@@ -171,6 +171,7 @@ def build_experiment(
     experiment_name: str = "default",
     config_dir: Path | None = None,
     train_data_path: Path | None = None,
+    override_rank: int | None = None,
 ) -> ExperimentSpec:
     """Build a validated experiment spec from named presets."""
     defaults = load_experiment_defaults(experiment_name, config_dir)
@@ -190,7 +191,7 @@ def build_experiment(
         adapter=AdapterPreset(
             method=method,
             scope=scope,
-            rank=int(method_defaults.get("rank", defaults.get("rank", 8))),
+            rank=override_rank if override_rank is not None else int(method_defaults.get("rank", defaults.get("rank", 8))),
             alpha=int(method_defaults.get("alpha", defaults.get("alpha", 16))),
             dropout=float(method_defaults.get("dropout", defaults.get("dropout", 0.05))),
         ),
