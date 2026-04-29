@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-import pytest
 import torch
 from torch.nn import functional
 
-from dora_repro.adapters import attach_adapter, iter_adapter_layers, merge_adapter_layers, unmerge_adapter_layers
+from dora_repro.adapters import (
+    attach_adapter,
+    iter_adapter_layers,
+    merge_adapter_layers,
+    unmerge_adapter_layers,
+)
 from dora_repro.config import AdapterPreset
 from dora_repro.lora import LoRALinear
+
 
 class _ToyProjectionModel(torch.nn.Module):
     def __init__(self) -> None:
@@ -15,6 +20,7 @@ class _ToyProjectionModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.q_proj(x)
+
 
 def test_lora_forward_matches_closed_form_update() -> None:
 

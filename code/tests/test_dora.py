@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import pytest
 import torch
 from torch.nn import functional
 
 from dora_repro.adapters import attach_adapter, iter_adapter_layers, merge_adapter_layers
 from dora_repro.config import AdapterPreset
 from dora_repro.dora import DoRALinear
+
+
 class _ToyProjectionModel(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -14,6 +15,7 @@ class _ToyProjectionModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.q_proj(x)
+
 
 def test_dora_zero_init_matches_base_and_initializes_magnitude() -> None:
     base = torch.nn.Linear(3, 2, bias=False)

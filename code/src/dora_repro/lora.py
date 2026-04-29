@@ -1,6 +1,11 @@
-import torch
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from dora_repro.adapters import AdapterLinearBase
+
+if TYPE_CHECKING:
+    import torch
 
 
 class LoRALinear(AdapterLinearBase):

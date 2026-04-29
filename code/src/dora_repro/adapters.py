@@ -13,6 +13,9 @@ from safetensors.torch import load_file, save_file
 from torch import nn
 from torch.nn import functional
 
+from dora_repro.dora import DoRALinear
+from dora_repro.lora import LoRALinear
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
@@ -196,7 +199,6 @@ class AdapterLinearBase(nn.Module):
         self.merged = False
 
 
-
 def prepare_model_for_adapter_training(
     model: PreTrainedModel,
     *,
@@ -239,9 +241,7 @@ def prepare_model_for_adapter_training(
 def _build_adapter_module(base_layer: nn.Module, adapter: AdapterPreset) -> AdapterLinearBase:
     kwargs = {"rank": adapter.rank, "alpha": adapter.alpha, "dropout": adapter.dropout}
     if adapter.method == "lora":
-        from dora_repro.lora import LoRALinear
         return LoRALinear(base_layer, **kwargs)
-    from dora_repro.dora import DoRALinear
     return DoRALinear(base_layer, **kwargs)
 
 
@@ -347,9 +347,3 @@ def load_adapter_checkpoint(model: nn.Module, adapter_dir: Path) -> None:
         for name, tensor in adapter_state.items():
             target = live_state[name]
             target.copy_(tensor.to(device=target.device, dtype=target.dtype))
-
-
-# Expose adapter classes for backward compatibility
-from dora_repro.lora import LoRALinear
-from dora_repro.dora import DoRALinear
-

@@ -191,7 +191,9 @@ def build_experiment(
         adapter=AdapterPreset(
             method=method,
             scope=scope,
-            rank=override_rank if override_rank is not None else int(method_defaults.get("rank", defaults.get("rank", 8))),
+            rank=override_rank
+            if override_rank is not None
+            else int(method_defaults.get("rank", defaults.get("rank", 8))),
             alpha=int(method_defaults.get("alpha", defaults.get("alpha", 16))),
             dropout=float(method_defaults.get("dropout", defaults.get("dropout", 0.05))),
         ),

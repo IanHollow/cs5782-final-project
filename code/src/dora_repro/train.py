@@ -262,10 +262,10 @@ def run_training(
     )
     write_snapshot(output_dir / "config.snapshot.toml", spec)
     model, tokenizer = load_model_and_tokenizer(spec)
-    
+
     trainable_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total_parameters = sum(p.numel() for p in model.parameters())
-    
+
     train_dataset, eval_dataset = _prepare_dataset(spec, tokenizer)
     run_logger.info(
         "Prepared tokenized datasets",

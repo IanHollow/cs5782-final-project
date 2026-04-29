@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 import torch
-from torch.nn import functional
 from transformers import LlamaConfig, LlamaForCausalLM
 
 from dora_repro.adapters import (
@@ -13,9 +12,7 @@ from dora_repro.adapters import (
     attach_adapter,
     iter_adapter_layers,
     load_adapter_checkpoint,
-    merge_adapter_layers,
     save_adapter_checkpoint,
-    unmerge_adapter_layers,
 )
 from dora_repro.config import AdapterPreset
 
@@ -46,9 +43,6 @@ def _tiny_llama() -> LlamaForCausalLM:
     config.bos_token_id = 1
     config.eos_token_id = 2
     return LlamaForCausalLM(config)
-
-
-
 
 
 @pytest.mark.parametrize(
@@ -90,9 +84,6 @@ def test_attach_adapter_rejects_reattaching_to_an_adapted_model() -> None:
     attach_adapter(model, AdapterPreset(method="lora", scope="attention_only"))
     with pytest.raises(TypeError, match="already has an adapter"):
         attach_adapter(model, AdapterPreset(method="lora", scope="attention_only"))
-
-
-
 
 
 def test_save_and_load_adapter_checkpoint_reproduces_logits(tmp_path: Path) -> None:
