@@ -44,9 +44,10 @@ SCOPE_LABELS = {
 }
 METHODS = ["lora", "dora"]
 METHOD_LABELS = {"lora": "LoRA", "dora": "DoRA"}
-LORAX_ORANGE = "#F47B20"
-LORAX_ORANGE_LIGHT = "#FFF0E6"
-DORAEMON_BLUE = "#009FE3"
+LORAX_ORANGE = "#FDB945"
+LORAX_ORANGE_LIGHT = "#FFF7E3"
+DORAEMON_BLUE = "#009AD8"
+DORAEMON_BLUE_DARK = "#0063C1"
 DARK_TEXT = "#17212F"
 GRID_COLOR = "#D7DEE8"
 PALETTE = {"LoRA": LORAX_ORANGE, "DoRA": DORAEMON_BLUE}
@@ -313,6 +314,7 @@ def fig1_macro_grouped(df: pd.DataFrame, out: Path) -> None:
         hue="method_label",
         hue_order=["LoRA", "DoRA"],
         palette=PALETTE,
+        saturation=1.0,
         edgecolor="white",
         linewidth=1.0,
         ax=ax,
@@ -323,7 +325,7 @@ def fig1_macro_grouped(df: pd.DataFrame, out: Path) -> None:
     ax.set_xlabel("")
     ax.set_ylabel("Macro-average accuracy (%)")
     ax.set_ylim(72, 82.5)
-    ax.legend(title="", frameon=True, loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    ax.legend(title="", frameon=True, loc="upper right")
     ax.tick_params(axis="x", labelsize=15)
     ax.tick_params(axis="y", labelsize=14)
     ax.grid(axis="x", visible=False)
@@ -345,7 +347,7 @@ def fig2_heatmap(df: pd.DataFrame, out: Path) -> None:
     )
     sns.heatmap(
         heatmap_df,
-        cmap=sns.light_palette(DORAEMON_BLUE, as_cmap=True),
+        cmap=sns.light_palette(DORAEMON_BLUE_DARK, as_cmap=True),
         annot=True,
         fmt=".1f",
         annot_kws={"fontsize": 10.5, "fontweight": "bold"},
@@ -374,7 +376,7 @@ def fig3_dora_gains(gains: pd.DataFrame, out: Path) -> None:
     heatmap_df = heatmap_df[[TASK_LABELS[task] for task in TASKS]]
     cmap = LinearSegmentedColormap.from_list(
         "lora_dora_delta",
-        [LORAX_ORANGE, "white", DORAEMON_BLUE],
+        [LORAX_ORANGE, "white", DORAEMON_BLUE_DARK],
     )
     fig, (ax, cax) = plt.subplots(
         ncols=2,
@@ -467,6 +469,7 @@ def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
         hue="method_label",
         hue_order=["LoRA", "DoRA"],
         palette=PALETTE,
+        saturation=1.0,
         edgecolor="white",
         linewidth=1.0,
         ax=ax,
@@ -477,7 +480,7 @@ def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
     ax.set_xlabel("")
     ax.set_ylabel("Macro-average accuracy (%)")
     ax.set_ylim(72, 83)
-    ax.legend(title="", frameon=True, loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    ax.legend(title="", frameon=True, loc="upper right")
     ax.tick_params(axis="x", labelsize=14)
     ax.tick_params(axis="y", labelsize=14)
     ax.grid(axis="x", visible=False)
