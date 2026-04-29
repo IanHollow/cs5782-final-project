@@ -3,7 +3,7 @@ from typing import cast
 import torch
 from torch import nn
 
-from dora_repro.adapters import AdapterLinearBase, _dequantize_weight
+from dora_repro.adapter_base import AdapterLinearBase, _dequantize_weight
 
 
 class DoRALinear(AdapterLinearBase):
