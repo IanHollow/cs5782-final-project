@@ -12,6 +12,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
 
 TASKS = [
     "boolq",
@@ -43,11 +44,12 @@ SCOPE_LABELS = {
 }
 METHODS = ["lora", "dora"]
 METHOD_LABELS = {"lora": "LoRA", "dora": "DoRA"}
-MICROSOFT_BLUE = "#0078D4"
-NVIDIA_GREEN = "#76B900"
+LORAX_ORANGE = "#F47B20"
+LORAX_ORANGE_LIGHT = "#FFF0E6"
+DORAEMON_BLUE = "#009FE3"
 DARK_TEXT = "#17212F"
 GRID_COLOR = "#D7DEE8"
-PALETTE = {"LoRA": MICROSOFT_BLUE, "DoRA": NVIDIA_GREEN}
+PALETTE = {"LoRA": LORAX_ORANGE, "DoRA": DORAEMON_BLUE}
 
 OFFICIAL_LLAMA2_7B_REFERENCE = [
     {
@@ -343,7 +345,7 @@ def fig2_heatmap(df: pd.DataFrame, out: Path) -> None:
     )
     sns.heatmap(
         heatmap_df,
-        cmap=sns.light_palette(NVIDIA_GREEN, as_cmap=True),
+        cmap=sns.light_palette(DORAEMON_BLUE, as_cmap=True),
         annot=True,
         fmt=".1f",
         annot_kws={"fontsize": 10.5, "fontweight": "bold"},
@@ -370,7 +372,10 @@ def fig3_dora_gains(gains: pd.DataFrame, out: Path) -> None:
         index="scope_label", columns="task_label", values="delta_points", aggfunc="first"
     )
     heatmap_df = heatmap_df[[TASK_LABELS[task] for task in TASKS]]
-    cmap = sns.diverging_palette(245, 120, s=85, l=55, center="light", as_cmap=True)
+    cmap = LinearSegmentedColormap.from_list(
+        "lora_dora_delta",
+        [LORAX_ORANGE, "white", DORAEMON_BLUE],
+    )
     fig, (ax, cax) = plt.subplots(
         ncols=2,
         figsize=(15.8, 5.3),
@@ -407,7 +412,7 @@ def fig4_delta_distribution(gains: pd.DataFrame, out: Path) -> None:
         data=plot_df,
         x="scope_label",
         y="delta_points",
-        color="#EEF7E3",
+        color=LORAX_ORANGE_LIGHT,
         width=0.48,
         fliersize=0,
         linewidth=1.35,
