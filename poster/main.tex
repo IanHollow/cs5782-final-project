@@ -24,7 +24,7 @@
   \setmathfont{Latin Modern Math}
 \fi
 
-\graphicspath{{../results/analysis/}}
+\graphicspath{{../results/analysis/}{images/}}
 
 % ====================
 % Layout
@@ -80,7 +80,9 @@
     \makebox[0pt][r]{Llama-2-7B \textbar{} Commonsense Reasoning}%
   }%
 }
-\logoright{\includegraphics[height=5.6cm]{images/generated/cornell_seal_white.png}}
+% White-theme: removed white-on-dark Cornell seal (invisible on white header).
+% Replace with a dark/colored Cornell seal PNG when available:
+% \logoright{\includegraphics[height=5.6cm]{images/cornell_seal_dark.png}}
 
 \begin{document}
 
@@ -199,11 +201,32 @@ MLP only & 79.05\% & \textbf{79.20\%} & +0.15 \\
 \normalsize
 \end{block}
 
-\begin{block}{Where Does DoRA Help?}
-\includegraphics[width=0.98\linewidth]{fig3_dora_gains.png}
-\tightcaption{2}{Task-level \dora{} minus \lora{} gains. Full-scope \dora{} improves 6/8 tasks, ties Social IQA, and slightly loses on WinoGrande.}
-\resultnote{Largest full-scope gains}{HellaSwag +6.0, ARC-Challenge +3.7, OpenBookQA +2.4 accuracy points.}
-\resultnote{Takeaway}{\dora{}'s benefit appears scope-dependent, not automatic.}
+\begin{block}{HellaSwag: Largest \dora{} Gain (\textbf{+6.0 pts})}
+\heading{Task Format --- Grounded Activity Completion}
+\small
+Given a short activity description, select the most plausible four-way continuation. Requires grounded physical-world commonsense.
+
+\vspace{0.7ex}
+\noindent\colorbox{SoftGray}{\parbox{0.94\linewidth}{%
+  \vspace{0.5ex}\small
+  \textbf{Context:} A woman is outside with a bucket and a dog. The dog is running around trying to avoid a bath. She pours soap on the dog and\ldots
+  \vspace{0.5ex}
+}}
+\vspace{0.7ex}
+
+\begin{tabular}{@{\hspace{0.5ex}}ll@{}}
+  \textbf{(A)} & lathers the dog up with a brush before rinsing. \\[0.35ex]
+  \textbf{(B)} & pours more water slowly into the bucket. \\[0.35ex]
+  \textcolor{DoraemonBlueDark}{\bfseries(C)} &
+    \textcolor{DoraemonBlueDark}{\bfseries scrubs the dog down and rinses it thoroughly.} \\[0.35ex]
+  \textbf{(D)} & lets the dog run off and air dry on the lawn. \\
+\end{tabular}
+
+\vspace{0.8ex}
+\normalsize
+\resultnote{Full-scope \dora{} vs.\ \lora{}}{79.5\% vs.\ 73.5\% on HellaSwag --- a \textbf{+6.0 pt} jump, the largest single-task gain in our study.}
+\resultnote{Why so large?}{Physical activity completion requires tight coordination of attention (routing) and MLP (world facts) layers --- exactly the regime where decomposed magnitude+direction updates outperform plain low-rank updates.}
+\resultnote{Takeaway}{\dora{}'s benefit is not automatic; it peaks when both layer types adapt together.}
 \end{block}
 
 \end{column}
