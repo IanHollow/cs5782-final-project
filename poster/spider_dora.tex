@@ -1,0 +1,67 @@
+\documentclass{article}
+\usepackage[paperwidth=13.5cm,paperheight=13.5cm,margin=0.4cm]{geometry}
+\usepackage{tikz}
+\usepackage{xcolor}
+\pagestyle{empty}
+
+\definecolor{DoraemonBlue}{RGB}{0,154,216}
+\definecolor{DoraemonBlueDark}{RGB}{0,99,193}
+
+\begin{document}
+\centering
+\begin{tikzpicture}[font=\small]
+  \node[font=\large\bfseries, text=DoraemonBlueDark] at (0,4.15)
+    {DoRA --- Per-Task Accuracy by Scope};
+
+  % grid rings
+  \foreach \r in {0.875,1.75,2.625,3.5}{
+    \draw[gray!22,line width=0.4pt]
+      (90:\r cm)--(45:\r cm)--(0:\r cm)--(315:\r cm)--
+      (270:\r cm)--(225:\r cm)--(180:\r cm)--(135:\r cm)--cycle;
+  }
+  % axes
+  \foreach \ang in {90,45,0,315,270,225,180,135}
+    \draw[gray!40,line width=0.5pt](0,0)--(\ang:3.5cm);
+  % tick labels
+  \node[right=2pt,text=gray!60,font=\scriptsize] at (90:0.875cm){66\%};
+  \node[right=2pt,text=gray!60,font=\scriptsize] at (90:1.75cm) {74\%};
+  \node[right=2pt,text=gray!60,font=\scriptsize] at (90:2.625cm){82\%};
+  \node[right=2pt,text=gray!60,font=\scriptsize] at (90:3.5cm)  {90\%};
+  % task labels
+  \node[above,      font=\small\bfseries] at (90:3.95cm) {BoolQ};
+  \node[above right,font=\small\bfseries] at (45:3.95cm) {PIQA};
+  \node[right,      font=\small\bfseries] at (0:3.95cm)  {Soc.\ IQA};
+  \node[below right,font=\small\bfseries] at (315:3.95cm){HellaSwag};
+  \node[below,      font=\small\bfseries] at (270:3.95cm){WinoGrande};
+  \node[below left, font=\small\bfseries] at (225:3.95cm){ARC-E};
+  \node[left,       font=\small\bfseries] at (180:3.95cm){ARC-C};
+  \node[above left, font=\small\bfseries] at (135:3.95cm){OBQA};
+
+  % r(v)=(v-58)/32*3.5
+  % DoRA Full: 76,85.2,79,79.5,82.5,82.5,64,84.9
+  \fill[DoraemonBlueDark,fill opacity=0.15]
+    (90:1.96875cm)--(45:2.975cm)--(0:2.296875cm)--(315:2.34844cm)--
+    (270:2.67969cm)--(225:2.67969cm)--(180:0.65625cm)--(135:2.94844cm)--cycle;
+  \draw[DoraemonBlueDark,line width=2.2pt]
+    (90:1.96875cm)--(45:2.975cm)--(0:2.296875cm)--(315:2.34844cm)--
+    (270:2.67969cm)--(225:2.67969cm)--(180:0.65625cm)--(135:2.94844cm)--cycle;
+
+  % DoRA Attention: 72,82,79,77,83,83,60,88.7
+  \draw[DoraemonBlue,line width=1.6pt,dash pattern=on 7pt off 3pt]
+    (90:1.53125cm)--(45:2.625cm)--(0:2.296875cm)--(315:2.078125cm)--
+    (270:2.734375cm)--(225:2.734375cm)--(180:0.21875cm)--(135:3.35156cm)--cycle;
+
+  % DoRA MLP: 76,84,79,77,83,85,63,86.6
+  \draw[DoraemonBlue!60!DoraemonBlueDark,line width=1.6pt,dotted]
+    (90:1.96875cm)--(45:2.84375cm)--(0:2.296875cm)--(315:2.078125cm)--
+    (270:2.734375cm)--(225:2.953125cm)--(180:0.546875cm)--(135:3.1281cm)--cycle;
+
+  % legend
+  \draw[DoraemonBlueDark,line width=2.2pt]                          (-3.5,-4.5)--(-2.0,-4.5);
+  \draw[DoraemonBlue,line width=1.6pt,dash pattern=on 6pt off 3pt] (-0.8,-4.5)--(0.7,-4.5);
+  \draw[DoraemonBlue!60!DoraemonBlueDark,line width=1.6pt,dotted]   (1.9,-4.5)--(3.4,-4.5);
+  \node[right,font=\small] at (-2.0,-4.5) {Full scope};
+  \node[right,font=\small] at  (0.7,-4.5) {Attention only};
+  \node[right,font=\small] at  (3.4,-4.5) {MLP only};
+\end{tikzpicture}
+\end{document}
