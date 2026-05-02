@@ -95,40 +95,50 @@
 \begin{column}{\colwidth}
 
 \begin{exampleblock}{Motivation \& Paper Idea}
-Full fine-tuning large language models is expensive in memory, storage, and training time. \lora{} reduces this cost by training low-rank adapter updates while freezing the base model, but the low-rank update alone may limit how pretrained weights can change.\shortcite{hu2022lora}
+Full fine-tuning large language models is expensive. \lora{} reduces the cost by training low-rank adapter updates while freezing the base model, but the update can constrain how pretrained weights move.\shortcite{hu2022lora}
 
 \heading{DoRA}
 \begin{itemize}
   \item \dora{} decomposes pretrained weights into \textbf{magnitude} and \textbf{direction}.\shortcite{liu2024dora}
   \item Direction receives a \lora{}-style low-rank update; magnitude is learned separately.
-  \item The paper reports improved accuracy over \lora{} across multiple tasks.
 \end{itemize}
 
 \heading{Project goal}
 \begin{itemize}
   \item Central question: does \dora{} improve commonsense reasoning accuracy over a same-scope \lora{} baseline?
-  \item Reproduce the paper's LLaMA2-7B commonsense reasoning trend.
-  \item Test whether \dora{} helps most in attention layers, MLP layers, or only when applied broadly.
+  \item Reproduce the paper's LLaMA2-7B trend and test attention-only, MLP-only, and full-scope adapters.
 \end{itemize}
 \end{exampleblock}
 
 \begin{block}{Methodology}
+\begin{columns}[T,totalwidth=\linewidth]
+\begin{column}{0.20\linewidth}
+\centering
+\includegraphics[width=0.96\linewidth]{images/generated/llama_logo.png}
+\end{column}
+\begin{column}{0.77\linewidth}
 \heading{Model, data, and metrics}
 \begin{itemize}
   \item Base model: \texttt{meta-llama/Llama-2-7b-hf}.
-  \item Training data: \texttt{commonsense\_15k.json}, a student-scale commonsense subset.
-  \item Evaluation: BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, OpenBookQA.
-  \item Metrics: per-task accuracy and macro-average accuracy across all eight tasks.
+  \item Training data: \texttt{commonsense\_15k.json}; evaluation across eight commonsense benchmarks.
+  \item Metrics: per-task accuracy and macro-average accuracy.
 \end{itemize}
+\end{column}
+\end{columns}
 
-\heading{Implementation}
-\begin{itemize}
-  \item From-scratch PyTorch \lora{} and \dora{} adapter layers injected into Hugging Face model modules.
-  \item Frozen base model, adapter-only checkpoints, 3 epochs, cutoff length 256.
-  \item 4-bit NF4 Colab runtime presets for T4, L4, and A100 GPUs.
-\end{itemize}
+\heading{Adapter mechanics}
+\begin{columns}[T,totalwidth=\linewidth]
+\begin{column}{0.49\linewidth}
+\centering
+\includegraphics[height=5.4cm,keepaspectratio]{images/lora_overview.png}
+\end{column}
+\begin{column}{0.49\linewidth}
+\centering
+\includegraphics[height=5.4cm,keepaspectratio]{images/dora_overview.png}
+\end{column}
+\end{columns}
 
-\resultnote{Controlled comparison}{Same model, 15k data subset, tasks, prompt/eval pipeline, seed 42, and adapter-only training. Paper-style method settings: \lora{} r=32, LR=3e-4; rank-halved \dora{} r=16, LR=2e-4.}
+\resultnote{Controlled comparison}{Frozen base model, adapter-only checkpoints, 3 epochs, cutoff length 256, seed 42. Paper-style settings: \lora{} r=32, LR=3e-4; rank-halved \dora{} r=16, LR=2e-4.}
 \end{block}
 
 \begin{block}{Our Independent Experiment: Scope Ablation}
@@ -145,8 +155,8 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 \normalsize
 
 \vspace{0.8ex}
-\resultnote{Motivation}{This ablation tests whether \dora{}'s gain comes from attention layers, MLP layers, or coordinated updates across both.}
-\resultnote{Design}{Each scope compares same-scope \lora{} and \dora{} adapters under the same evaluation pipeline.}
+\includegraphics[height=5.2cm,keepaspectratio]{images/transformer_layer.png}
+\tightcaption{1}{The ablation isolates adapter placement in attention projections, MLP projections, or both.}
 \end{block}
 
 \end{column}
@@ -180,51 +190,25 @@ Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's
 \end{alertblock}
 
 \begin{block}{Macro Accuracy by Adapter Scope}
-\includegraphics[width=0.98\linewidth]{fig1_macro_grouped.png}
-\tightcaption{1}{Full-scope, rank-halved \dora{} improves macro accuracy from 77.4\% to 79.2\%. Attention-only \dora{} does not improve over its same-scope \lora{} baseline.}
-
-\vspace{0.8ex}
-\small
-\begin{center}
-\begin{tabular}{lrrr}
-\toprule
-\textbf{Scope} & \textbf{\lora{} macro} & \textbf{\dora{} macro} & \textbf{Delta} \\
-\midrule
-Full & 77.41\% & \textbf{79.20\%} & \textbf{+1.79} \\
-Attention only & \textbf{79.59\%} & 78.09\% & -1.50 \\
-MLP only & 79.05\% & \textbf{79.20\%} & +0.15 \\
-\bottomrule
-\end{tabular}
-\end{center}
-\normalsize
+\vspace{-0.4ex}
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}c@{\hspace{0.12cm}}c@{\hspace{0.08cm}}c@{\hspace{0.08cm}}c@{\hspace{0.12cm}}c@{}}
+\raisebox{-0.5\height}{\includegraphics[height=13.2cm,keepaspectratio]{images/generated/the_lorax_cropped.png}} &
+\raisebox{-0.5\height}{\includegraphics[height=11.4cm,keepaspectratio]{fig1_lora_compact.png}} &
+\raisebox{-0.5\height}{\fontsize{58}{60}\selectfont\bfseries vs.} &
+\raisebox{-0.5\height}{\includegraphics[height=11.4cm,keepaspectratio]{fig1_dora_compact.png}} &
+\raisebox{-0.5\height}{\includegraphics[height=13.2cm,keepaspectratio]{images/generated/doraemon_cropped.png}}
+\end{tabular}%
+}
+\vspace{-0.8ex}
+\tightcaption{2}{The full-scope bars are outlined: rank-halved \dora{} improves macro accuracy from 77.4\% to 79.2\%.}
 \end{block}
 
 \begin{block}{HellaSwag: Largest \dora{} Gain (\textbf{+6.0 pts})}
-\heading{Task Format --- Grounded Activity Completion}
-\small
-Given a short activity description, select the most plausible four-way continuation. Requires grounded physical-world commonsense.
-
-\vspace{0.7ex}
-\noindent\colorbox{SoftGray}{\parbox{0.94\linewidth}{%
-  \vspace{0.5ex}\small
-  \textbf{Context:} A woman is outside with a bucket and a dog. The dog is running around trying to avoid a bath. She pours soap on the dog and\ldots
-  \vspace{0.5ex}
-}}
-\vspace{0.7ex}
-
-\begin{tabular}{@{\hspace{0.5ex}}ll@{}}
-  \textbf{(A)} & lathers the dog up with a brush before rinsing. \\[0.35ex]
-  \textbf{(B)} & pours more water slowly into the bucket. \\[0.35ex]
-  \textcolor{DoraemonBlueDark}{\bfseries(C)} &
-    \textcolor{DoraemonBlueDark}{\bfseries scrubs the dog down and rinses it thoroughly.} \\[0.35ex]
-  \textbf{(D)} & lets the dog run off and air dry on the lawn. \\
-\end{tabular}
-
-\vspace{0.8ex}
-\normalsize
-\resultnote{Full-scope \dora{} vs.\ \lora{}}{79.5\% vs.\ 73.5\% on HellaSwag --- a \textbf{+6.0 pt} jump, the largest single-task gain in our study.}
-\resultnote{Why so large?}{Physical activity completion requires tight coordination of attention (routing) and MLP (world facts) layers --- exactly the regime where decomposed magnitude+direction updates outperform plain low-rank updates.}
-\resultnote{Takeaway}{\dora{}'s benefit is not automatic; it peaks when both layer types adapt together.}
+\resultnote{Task format}{Choose the most plausible four-way continuation for a grounded activity description.}
+\resultnote{Full-scope \dora{} vs.\ \lora{}}{79.5\% vs.\ 73.5\% on HellaSwag, the largest single-task gain in our study.}
+\resultnote{Takeaway}{The gain peaks when attention routing and MLP world knowledge adapt together; attention-only \dora{} loses the benefit.}
 
 \end{block}
 
