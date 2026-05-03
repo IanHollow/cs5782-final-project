@@ -147,10 +147,10 @@
   \begin{beamercolorbox}{headline}
     \begin{columns}
       \begin{column}{\maxlogowidth}
-        \vskip5ex
+        \vskip4ex
         \ifdefined\insertlogoleft
         \vspace*{\fill}
-        \hspace{10ex}
+        \hspace{8ex}
         \raggedright
         \insertlogoleft
         \vspace*{\fill}
@@ -158,7 +158,7 @@
       \end{column}
       \begin{column}{\dimexpr\paperwidth-\maxlogowidth-\maxlogowidth}
         \usebeamerfont{headline}
-        \vskip3ex
+        \vskip2.5ex
         \centering
         \ifx \inserttitle \empty \else
         {\usebeamerfont{headline title}\usebeamercolor[fg]{headline title}\inserttitle\\[0.5ex]}
@@ -171,17 +171,17 @@
         \fi
       \end{column}
       \begin{column}{\maxlogowidth}
-        \vskip5ex
+        \vskip4ex
         \ifdefined\insertlogoright
         \vspace*{\fill}
         \raggedleft
         \insertlogoright
-        \hspace{10ex}
+        \hspace{8ex}
         \vspace*{\fill}
         \else\fi
       \end{column}
     \end{columns}
-    \vspace{5ex}
+    \vspace{4ex}
     \ifbeamercolorempty[bg]{headline rule}{}{
       \begin{beamercolorbox}[wd=\paperwidth,colsep=0.5ex]{headline rule}\end{beamercolorbox}
     }
@@ -275,13 +275,13 @@
     \ifbeamercolorempty[bg]{headline rule}{}{
       \begin{beamercolorbox}[wd=\paperwidth,colsep=0.25ex]{headline rule}\end{beamercolorbox}
     }
-    \vspace{1.5ex}
+    \vspace{0.25ex}
     \hspace{\sepwidth}
     \usebeamerfont{footline}
     \centering
     \insertfootercontent
     \hspace{\sepwidth}
-    \vspace{1.5ex}
+    \vspace{0.25ex}
   \end{beamercolorbox}
   \else\fi
 }

@@ -32,8 +32,8 @@
 
 \newlength{\sepwidth}
 \newlength{\colwidth}
-\setlength{\sepwidth}{0.017\paperwidth}
-\setlength{\colwidth}{0.310666\paperwidth}
+\setlength{\sepwidth}{0.014\paperwidth}
+\setlength{\colwidth}{0.312666\paperwidth}
 \newcommand{\separatorcolumn}{\begin{column}{\sepwidth}\end{column}}
 
 \setbeamerfont{block title}{size=\Large,series=\bfseries}
@@ -82,11 +82,11 @@
 \institute{Cornell University \samelineand CS 5782 / CS 4782 Intro to Deep Learning}
 
 \footercontent{%
-  \small
+  \footnotesize
   \makebox[\dimexpr\paperwidth-2\sepwidth\relax]{%
     \makebox[0pt][l]{DoRA Reproduction}%
-    \hfill Cornell CS 5782 / CS 4782\hfill%
-    \makebox[0pt][r]{Llama-2-7B \textbar{} Commonsense Reasoning}%
+    \hfill CS 5782 / CS 4782 Intro to Deep Learning\hfill%
+    \makebox[0pt][r]{Cornell University}%
   }%
 }
 \logoright{\includegraphics[height=5.6cm]{images/generated/cornell_seal_white.png}}
@@ -151,6 +151,13 @@ Full fine-tuning large language models is expensive. \lora{} reduces the cost by
 \end{block}
 
 \begin{block}{Our Independent Experiment: Scope Ablation}
+\centering
+\includegraphics[width=0.75\linewidth]{images/generated/transformer_layer_cropped.png}
+\tightcaption{1}{The ablation isolates adapter placement in attention projections, MLP projections, or both.}
+\end{block}
+
+\vspace{0.8ex}
+
 \small
 \begin{tabularx}{\linewidth}{>{\bfseries}l X X}
 \toprule
@@ -163,10 +170,6 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 \end{tabularx}
 \normalsize
 
-\vspace{0.8ex}
-\includegraphics[height=5.2cm,keepaspectratio]{images/transformer_layer.png}
-\tightcaption{1}{The ablation isolates adapter placement in attention projections, MLP projections, or both.}
-\end{block}
 
 \end{column}
 
