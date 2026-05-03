@@ -522,7 +522,7 @@ def fig6_rank_scaling(ranked_df: pd.DataFrame, out: Path) -> None:
     plot_df = ranked_df.copy()
     palette = {"LoRA": LORAX_ORANGE, "DoRA": DORAEMON_BLUE}
 
-    fig, ax_top = plt.subplots(figsize=(12.4, 5.8))
+    fig, ax_top = plt.subplots(figsize=(14.8, 6.9))
 
     sns.lineplot(
         data=plot_df,
@@ -532,9 +532,9 @@ def fig6_rank_scaling(ranked_df: pd.DataFrame, out: Path) -> None:
         hue_order=["LoRA", "DoRA"],
         palette=palette,
         marker="o",
-        markersize=10,
+        markersize=14,
         dashes=False,
-        linewidth=2.8,
+        linewidth=4.4,
         ax=ax_top,
     )
     for method_label in ["LoRA", "DoRA"]:
@@ -544,23 +544,23 @@ def fig6_rank_scaling(ranked_df: pd.DataFrame, out: Path) -> None:
                 f"{row.macro_points:.1f}",
                 (row.rank, row.macro_points),
                 textcoords="offset points",
-                xytext=(0, 8 if method_label == "LoRA" else -18),
+                xytext=(0, 12 if method_label == "LoRA" else -24),
                 ha="center",
                 va="bottom" if method_label == "LoRA" else "top",
-                fontsize=13,
+                fontsize=18,
                 fontweight="bold",
                 color=palette[method_label],
             )
 
-    ax_top.set_ylabel("Macro-average accuracy (%)", fontsize=15)
-    ax_top.set_xlabel("Ranks", fontsize=15)
+    ax_top.set_ylabel("Macro-average accuracy (%)", fontsize=19)
+    ax_top.set_xlabel("Ranks", fontsize=19)
     ax_top.set_xscale("log", base=2)
     ax_top.set_xlim(3.5, 36)
     ax_top.set_xticks([4, 8, 16, 32])
     ax_top.set_xticklabels(["4", "8", "16", "32"])
     ax_top.set_ylim(75.5, 80.6)
     ax_top.legend(title="", frameon=True, loc="upper right")
-    ax_top.tick_params(axis="both", labelsize=15)
+    ax_top.tick_params(axis="both", labelsize=19)
     ax_top.grid(axis="x", visible=False)
     ax_top.grid(axis="y", linestyle="--", linewidth=0.9, alpha=0.7)
     sns.despine(ax=ax_top)
