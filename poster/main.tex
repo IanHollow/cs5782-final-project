@@ -61,8 +61,17 @@
 }
 
 \newcommand{\shortcite}[1]{\raisebox{0.65ex}{\scriptsize\cite{#1}}}
-\newcommand{\dora}{\textcolor{DoraemonBlueDark}{\textbf{DoRA}}}
+\newcommand{\dora}{\textcolor{DoraemonBlue}{\textbf{DoRA}}}
 \newcommand{\lora}{\textcolor{LoraxOrangeDark}{\textbf{LoRA}}}
+\newcommand{\loraxlabel}{\fontsize{34}{36}\selectfont\bfseries\lora{}\textcolor{black}{x}}
+\newcommand{\doraemonlabel}{\fontsize{34}{36}\selectfont\bfseries\dora{}\textcolor{black}{emon}}
+\newcommand{\matchuplabel}{%
+  \makebox[\linewidth][l]{%
+    \hspace*{0.20\linewidth}\makebox[0pt][c]{\loraxlabel}%
+    \hspace*{0.30\linewidth}\makebox[0pt][c]{{\fontsize{34}{36}\selectfont\bfseries vs.}}%
+    \hspace*{0.31\linewidth}\makebox[0pt][c]{\doraemonlabel}%
+  }%
+}
 
 % ====================
 % Title
@@ -193,12 +202,20 @@ Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's
 \vspace{-0.4ex}
 \centering
 \resizebox{\linewidth}{!}{%
-\begin{tabular}{@{}c@{\hspace{0.12cm}}c@{\hspace{0.08cm}}c@{\hspace{0.08cm}}c@{\hspace{0.12cm}}c@{}}
-\raisebox{-0.5\height}{\includegraphics[height=13.2cm,keepaspectratio]{images/generated/the_lorax_cropped.png}} &
-\raisebox{-0.5\height}{\includegraphics[height=11.4cm,keepaspectratio]{fig1_lora_compact.png}} &
-\raisebox{-0.5\height}{\fontsize{58}{60}\selectfont\bfseries vs.} &
-\raisebox{-0.5\height}{\includegraphics[height=11.4cm,keepaspectratio]{fig1_dora_compact.png}} &
-\raisebox{-0.5\height}{\includegraphics[height=13.2cm,keepaspectratio]{images/generated/doraemon_cropped.png}}
+\begin{tabular}{@{}c@{\hspace{0.22cm}}c@{}}
+\raisebox{-0.5\height}{\includegraphics[height=9.7cm,keepaspectratio]{images/generated/the_lorax_cropped.png}} &
+\raisebox{-0.5\height}{\includegraphics[height=6.5cm,keepaspectratio]{fig1_lora_compact.png}}
+\end{tabular}%
+}
+\vspace{-1.1ex}
+
+{\matchuplabel}
+\vspace{-1.1ex}
+
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}c@{\hspace{0.22cm}}c@{}}
+\raisebox{-0.5\height}{\includegraphics[height=6.5cm,keepaspectratio]{fig1_dora_compact.png}} &
+\raisebox{-0.5\height}{\includegraphics[height=9.7cm,keepaspectratio]{images/generated/doraemon_cropped.png}}
 \end{tabular}%
 }
 \vspace{-0.8ex}
@@ -209,7 +226,6 @@ Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's
 \resultnote{Task format}{Choose the most plausible four-way continuation for a grounded activity description.}
 \resultnote{Full-scope \dora{} vs.\ \lora{}}{79.5\% vs.\ 73.5\% on HellaSwag, the largest single-task gain in our study.}
 \resultnote{Takeaway}{The gain peaks when attention routing and MLP world knowledge adapt together; attention-only \dora{} loses the benefit.}
-
 \end{block}
 
 \end{column}
