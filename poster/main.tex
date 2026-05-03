@@ -271,11 +271,27 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 \tightcaption{2}{The full-scope bars are outlined: rank-halved \dora{} improves macro accuracy from 77.4\% to 79.2\%.}
 \end{block}
 
-\begin{block}{HellaSwag: Largest \dora{} Gain (\textbf{+6.0 pts})}
-\resultnote{Task format}{Choose the most plausible four-way continuation for a grounded activity description.}
-\resultnote{Full-scope \dora{} vs.\ \lora{}}{79.5\% vs.\ 73.5\% on HellaSwag, the largest single-task gain in our study.}
-\resultnote{Takeaway}{The gain peaks when attention routing and MLP world knowledge adapt together; attention-only \dora{} loses the benefit.}
-\end{block}
+\begin{exampleblock}{Benchmark with Largest \dora{} Gain: HellaSwag (\textbf{+6.0 pts})}
+\heading{Task Format --- Grounded Activity Completion}
+\small
+Given a short activity description, select the most plausible four-way continuation. Requires grounded physical-world commonsense.
+
+\vspace{0.7ex}
+\noindent\colorbox{SoftGray}{\parbox{0.94\linewidth}{%
+  \vspace{0.5ex}\small
+  \textbf{Context:} A woman is outside with a bucket and a dog. The dog is running around trying to avoid a bath. She pours soap on the dog and\ldots
+  \vspace{0.5ex}
+}}
+\vspace{0.7ex}
+
+\begin{tabular}{@{\hspace{0.5ex}}ll@{}}
+  \textbf{(A)} & lathers the dog up with a brush before rinsing. \\[0.35ex]
+  \textbf{(B)} & pours more water slowly into the bucket. \\[0.35ex]
+  \textcolor{DoraemonBlueDark}{\bfseries(C)} &
+    \textcolor{DoraemonBlueDark}{\bfseries scrubs the dog down and rinses it thoroughly.} \\[0.35ex]
+  \textbf{(D)} & lets the dog run off and air dry on the lawn. \\
+\end{tabular}
+\end{exampleblock}
 
 \end{column}
 
