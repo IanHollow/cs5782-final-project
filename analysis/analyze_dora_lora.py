@@ -7,12 +7,15 @@ import json
 import sys
 from itertools import starmap
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from matplotlib.colors import LinearSegmentedColormap
+
+if TYPE_CHECKING:
+    from matplotlib.container import BarContainer
 
 TASKS = [
     "boolq",
@@ -51,6 +54,24 @@ DORAEMON_BLUE_DARK = "#0063C1"
 DARK_TEXT = "#17212F"
 GRID_COLOR = "#D7DEE8"
 PALETTE = {"LoRA": LORAX_ORANGE, "DoRA": DORAEMON_BLUE}
+
+
+class ScopeSummaryRecord(TypedDict):
+    scope: str
+    scope_label: str
+    lora_macro: float
+    dora_macro: float
+    delta: float
+    delta_points: float
+    task_wins: int
+    task_ties: int
+    task_losses: int
+    best_task: str
+    worst_task: str
+    mean_task_delta_points: float
+    median_task_delta_points: float
+    task_delta_std_points: float
+
 
 OFFICIAL_LLAMA2_7B_REFERENCE = [
     {
@@ -321,7 +342,13 @@ def fig1_macro_grouped(df: pd.DataFrame, out: Path) -> None:
         ax=ax,
     )
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.1f", padding=4, fontsize=13, fontweight="bold")
+        ax.bar_label(
+            cast("BarContainer", container),
+            fmt="%.1f",
+            padding=4,
+            fontsize=13,
+            fontweight="bold",
+        )
     ax.set_title("")
     ax.set_xlabel("")
     ax.set_ylabel("Macro-average accuracy (%)")
@@ -462,12 +489,10 @@ def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
     """Compare full-scope reproduction macro accuracy with the official reference."""
     plot_df = comparison.copy()
     plot_df["label"] = plot_df["source"].str.replace(" Table 1 ", "\nTable 1 ", regex=False)
-    plot_df["method_label"] = plot_df["method_label"].map(
-        {
-            "LoRA": "LoRA (r=32)",
-            "DoRA": "DoRA (r=16)",
-        }
-    )
+    plot_df["method_label"] = plot_df["method_label"].map({
+        "LoRA": "LoRA (r=32)",
+        "DoRA": "DoRA (r=16)",
+    })
     palette = {
         "LoRA (r=32)": LORAX_ORANGE,
         "DoRA (r=16)": DORAEMON_BLUE,
@@ -486,7 +511,13 @@ def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
         ax=ax,
     )
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.1f", padding=4, fontsize=20, fontweight="bold")
+        ax.bar_label(
+            cast("BarContainer", container),
+            fmt="%.1f",
+            padding=4,
+            fontsize=20,
+            fontweight="bold",
+        )
     ax.set_title("")
     ax.set_xlabel("")
     ax.set_ylabel("Macro-average accuracy (%)")
@@ -573,13 +604,13 @@ def print_summary(scope_summary: pd.DataFrame, task_summary: pd.DataFrame) -> No
     print("\n" + "=" * 78)
     print("  RESULT ANALYSIS: Macro-Average Accuracy and Task-Level Consistency")
     print("=" * 78)
-    for row in scope_summary.itertuples(index=False):
+    for row in cast("list[ScopeSummaryRecord]", scope_summary.to_dict("records")):
         print(
-            f"  {row.scope_label:<15} LoRA={row.lora_macro:.4f}  DoRA={row.dora_macro:.4f}  "
-            f"delta={row.delta_points:+.2f} pts  wins/ties/losses="
-            f"{row.task_wins}/{row.task_ties}/{row.task_losses}"
+            f"  {row['scope_label']:<15} LoRA={row['lora_macro']:.4f}  "
+            f"DoRA={row['dora_macro']:.4f}  delta={row['delta_points']:+.2f} pts  "
+            f"wins/ties/losses={row['task_wins']}/{row['task_ties']}/{row['task_losses']}"
         )
-        print(f"      best task: {row.best_task}; weakest task: {row.worst_task}")
+        print(f"      best task: {row['best_task']}; weakest task: {row['worst_task']}")
 
     best_scope = scope_summary.loc[scope_summary["delta_points"].idxmax()]
     robust_scope = scope_summary.loc[scope_summary["task_wins"].idxmax()]
