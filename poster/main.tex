@@ -65,7 +65,7 @@
 \newcommand{\lora}{\textcolor{LoraxOrangeDark}{\textbf{LoRA}}}
 \newcommand{\loraxlabel}{\fontsize{34}{36}\selectfont\bfseries\lora{}\textcolor{black}{x}}
 \newcommand{\doraemonlabel}{\fontsize{34}{36}\selectfont\bfseries\dora{}\textcolor{black}{emon}}
-\newcommand{\compactheading}[1]{\par\smallskip{\usebeamerfont{heading}\usebeamercolor[fg]{heading}#1}\par\smallskip}
+\newcommand{\compactheading}[1]{\par\vspace{-0.7ex}{\usebeamerfont{heading}\usebeamercolor[fg]{heading}#1}\par\vspace{-0.25ex}}
 \newcommand{\matchuplabel}{%
   \makebox[\linewidth][l]{%
     \hspace*{0.20\linewidth}\makebox[0pt][c]{\loraxlabel}%
@@ -78,7 +78,7 @@
 % Title
 % ====================
 
-\title{DoRAemon's Secret Tool for an A in Deep Learning: Weight-Decomposed Fine-Tuning}
+\title{\textcolor{DoraemonBlue}{DoRA}emon's Secret Tool for an \textcolor{green!70!white}{A+} in Deep Learning: Weight-Decomposed Fine-Tuning}
 \author{Ian Holloway \and Younghyun Jung \and Swathi Selvam \and Shashwat Modi}
 \institute{Cornell University \samelineand CS 5782 / CS 4782 Intro to Deep Learning}
 
@@ -104,12 +104,12 @@
 
 \begin{column}{\colwidth}
 
-\begin{exampleblock}{Motivation \& Paper Idea}
-Full fine-tuning large language models is expensive. \lora{} reduces the cost by training low-rank adapter updates while freezing the base model, but the update can constrain how pretrained weights move.\shortcite{hu2022lora}
+\begin{exampleblock}{Introduction}
+Full fine-tuning large language models is expensive. \lora{} reduces the cost by training low-rank adapter updates while freezing the base model.\shortcite{hu2022lora}
 
 \compactheading{DoRA}
 \begin{itemize}
-  \setlength{\itemsep}{0.35ex}
+  \setlength{\itemsep}{0.05ex}
   \setlength{\parskip}{0pt}
   \item \dora{} decomposes pretrained weights into \textbf{magnitude} and \textbf{direction}.\shortcite{liu2024dora}
   \item Direction receives a \lora{}-style low-rank update; magnitude is learned separately.
@@ -117,58 +117,53 @@ Full fine-tuning large language models is expensive. \lora{} reduces the cost by
 
 \compactheading{Project goal}
 \begin{itemize}
-  \setlength{\itemsep}{0.35ex}
+  \setlength{\itemsep}{0.05ex}
   \setlength{\parskip}{0pt}
   \item Does \dora{} improve commonsense accuracy over a same-scope \lora{} baseline?
   \item Reproduce the LLaMA2-7B trend and test attention-only, MLP-only, and full-scope adapters.
 \end{itemize}
 \end{exampleblock}
 
-\vspace{-1.0ex}
+\vspace{-1.6ex}
+
+\begin{center}
+\compactheading{Lora Adapter Mechanics \hspace{8cm} DoRA Adapter Mechanics}
+\end{center}
+\makebox[\linewidth][c]{%
+\includegraphics[height=12cm,keepaspectratio]{images/generated/lora_overview_cropped.png}%
+\hspace{0.14cm}%
+\includegraphics[height=12cm,keepaspectratio]{images/generated/dora_overview_cropped.png}%
+}
 
 \begin{block}{Methodology}
 \begin{columns}[T,totalwidth=\linewidth]
-\begin{column}{0.20\linewidth}
+\begin{column}{0.14\linewidth}
 \centering
-\includegraphics[width=0.96\linewidth]{images/generated/llama_logo.png}
+\includegraphics[width=0.99\linewidth]{images/generated/llama_logo.png}
 \end{column}
-\begin{column}{0.77\linewidth}
-\heading{Model, data, and metrics}
+\begin{column}{0.84\linewidth}
 \begin{itemize}
-  \setlength{\itemsep}{0.35ex}
+  \normalsize
+  \setlength{\itemsep}{0pt}
   \setlength{\parskip}{0pt}
-  \item Base model: \texttt{meta-llama/Llama-2-7b-hf}.
-  \item Training data: \texttt{commonsense\_15k.json}; eval on eight commonsense benchmarks.
-  \item Metrics: per-task and macro-average accuracy.
+  \item We used 15k examples, not the full 170k, because compute was limited.
+  \item Otherwise, we followed the \dora{} paper and reported per-task plus macro-average accuracy.
 \end{itemize}
 \end{column}
 \end{columns}
-
-\heading{Adapter mechanics}
-\begin{columns}[T,totalwidth=\linewidth]
-\begin{column}{0.49\linewidth}
-\centering
-\includegraphics[height=9.4cm,keepaspectratio]{images/generated/lora_overview_cropped.png}
-\end{column}
-\begin{column}{0.49\linewidth}
-\centering
-\includegraphics[height=9.4cm,keepaspectratio]{images/generated/dora_overview_cropped.png}
-\end{column}
-\end{columns}
-
-\vspace{-0.9ex}
+\vspace{-1.0ex}
 \resultnote{Controlled comparison}{Frozen base model, adapter-only checkpoints, 3 epochs, cutoff length 256, seed 42. Settings: \lora{} r=32, LR=3e-4; rank-halved \dora{} r=16, LR=2e-4.}
 \end{block}
 
-\vspace{-1.0ex}
+\vspace{-1.6ex}
 
 \begin{block}{Our Independent Experiment: Scope Ablation}
 \centering
-\includegraphics[width=0.75\linewidth]{images/generated/transformer_layer_cropped.png}
+\includegraphics[width=0.8\linewidth]{images/generated/transformer_layer_cropped.png}
 \tightcaption{1}{The ablation isolates adapter placement in attention projections, MLP projections, or both.}
 \end{block}
 
-\vspace{-0.1ex}
+\vspace{-0.8ex}
 
 \small
 \begin{tabularx}{\linewidth}{>{\bfseries}l X X}
@@ -193,7 +188,7 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 
 \begin{column}{\colwidth}
 
-\begin{alertblock}{Headline Result}
+\begin{alertblock}{Verdict: DoRA Pulls Ahead}
 \begingroup
 \setlength{\tabcolsep}{0pt}
 \renewcommand{\arraystretch}{1.0}
@@ -213,7 +208,7 @@ Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's
 \end{center}
 \end{alertblock}
 
-\begin{block}{Macro Accuracy by Adapter Scope}
+\begin{block}{The Adapter Duel}
 \vspace{-0.4ex}
 \centering
 \resizebox{\linewidth}{!}{%
@@ -277,7 +272,7 @@ Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's
 
 \heading{Next steps}
 \begin{itemize}
-  \item Train on the full \texttt{commonsense\_170k.json} dataset.
+  \item Train on the full \texttt{commonsense\_170k} dataset.
   \item Repeat all six conditions across multiple random seeds.
   \item Add parameter-count, GPU-memory, and wall-clock cost comparisons.
 \end{itemize}
