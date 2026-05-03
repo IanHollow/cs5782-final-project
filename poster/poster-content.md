@@ -66,13 +66,11 @@ Motivation: this ablation tests whether DoRA's gain comes from attention layers,
 | Attention-only | **79.59%** | **78.09%** | **-1.50 pts** |
 | MLP-only | **79.05%** | **79.20%** | **+0.15 pts** |
 
-## Interpretation
+## Rank Comparison
 
-- The main paper-level claim partially reproduced: DoRA beat LoRA in the full adapter setting.
-- DoRA's gain was not automatic across isolated module groups.
-- Attention-only DoRA underperformed attention-only LoRA on 7/8 tasks; MLP-only DoRA was roughly tied overall.
-- Key takeaway: DoRA appears most useful when attention and MLP transformations adapt together, not as a narrow drop-in replacement for one module group.
-- Key limitations: 15k subset instead of full data, seed 42 only, quantized Colab runs, and a local implementation rather than the exact official recipe.
+![LoRA vs DoRA across rank sizes](../results/analysis/fig6_rank_scaling.png)
+
+Macro-average accuracy across rank sizes, with the DoRA advantage shown in the lower panel.
 
 ## Conclusion
 

@@ -54,7 +54,7 @@ PALETTE = {"LoRA": LORAX_ORANGE, "DoRA": DORAEMON_BLUE}
 
 OFFICIAL_LLAMA2_7B_REFERENCE = [
     {
-        "source": "DoRA paper Table 1 LLaMA2-7B",
+        "source": "DoRA paper Table 1",
         "method": "lora",
         "paper_method": "LoRA",
         "rank": 32,
@@ -70,7 +70,7 @@ OFFICIAL_LLAMA2_7B_REFERENCE = [
         "macro_average": 0.776,
     },
     {
-        "source": "DoRA paper Table 1 LLaMA2-7B",
+        "source": "DoRA paper Table 1",
         "method": "dora",
         "paper_method": "DoRA-dagger (Ours)",
         "rank": 16,
@@ -88,6 +88,7 @@ OFFICIAL_LLAMA2_7B_REFERENCE = [
 ]
 
 CHECKED_IN_SUMMARY_PATH = Path("results/analysis/summary_table.csv")
+CHECKED_IN_RANKED_PATH = Path("results/analysis/benchmark_summary_rank.csv")
 
 
 def _configure_plot_style() -> None:
@@ -131,10 +132,10 @@ def _condition_label(method: str, scope: str) -> str:
     return f"{METHOD_LABELS[method]} - {SCOPE_LABELS[scope]}"
 
 
-def _save(fig: plt.Figure, out: Path, *, tight: bool = True) -> None:
+def _save(fig: plt.Figure, out: Path, *, tight: bool = True, dpi: int | None = None) -> None:
     if tight:
         fig.tight_layout()
-    fig.savefig(out, bbox_inches="tight", facecolor="white")
+    fig.savefig(out, bbox_inches="tight", facecolor="white", dpi=dpi)
     plt.close(fig)
     print(f"  Saved: {out.name}")
 
@@ -278,7 +279,7 @@ def build_official_comparison(df: pd.DataFrame) -> pd.DataFrame:
     """Compare our full-scope macro result with the official LLaMA2-7B reference."""
     full_rows = df[df["scope"] == "full"].copy()
     ours = full_rows[["method", "macro_average", *TASKS]].copy()
-    ours["source"] = "This repo LLaMA2-7B full scope"
+    ours["source"] = "Reproduction"
     ours["rank"] = ours["method"].map({"lora": 32, "dora": 16})
     ours["params_percent"] = pd.NA
     ours["paper_method"] = ours["method"].map({"lora": "LoRA", "dora": "DoRA"})
@@ -461,22 +462,32 @@ def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
     """Compare full-scope reproduction macro accuracy with the official reference."""
     plot_df = comparison.copy()
     plot_df["label"] = plot_df["source"].str.replace(" Table 1 ", "\nTable 1 ", regex=False)
+    plot_df["method_label"] = plot_df["method_label"].map(
+        {
+            "LoRA": "LoRA (r=32)",
+            "DoRA": "DoRA (r=16)",
+        }
+    )
+    palette = {
+        "LoRA (r=32)": LORAX_ORANGE,
+        "DoRA (r=16)": DORAEMON_BLUE,
+    }
     fig, ax = plt.subplots(figsize=(11.5, 6.4))
     sns.barplot(
         data=plot_df,
         x="label",
         y="macro_points",
         hue="method_label",
-        hue_order=["LoRA", "DoRA"],
-        palette=PALETTE,
+        hue_order=["LoRA (r=32)", "DoRA (r=16)"],
+        palette=palette,
         saturation=1.0,
         edgecolor="white",
         linewidth=1.0,
         ax=ax,
     )
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.1f", padding=4, fontsize=13, fontweight="bold")
-    ax.set_title("Full-Scope Macro Accuracy vs Official LLaMA2-7B Reference")
+        ax.bar_label(container, fmt="%.1f", padding=4, fontsize=20, fontweight="bold")
+    ax.set_title("")
     ax.set_xlabel("")
     ax.set_ylabel("Macro-average accuracy (%)")
     ax.set_ylim(72, 83)
@@ -486,6 +497,75 @@ def fig5_official_comparison(comparison: pd.DataFrame, out: Path) -> None:
     ax.grid(axis="x", visible=False)
     sns.despine(ax=ax)
     _save(fig, out)
+
+
+def load_ranked_results() -> pd.DataFrame:
+    """Load the checked-in rank sweep for the full-scope LoRA and DoRA runs."""
+    if not CHECKED_IN_RANKED_PATH.exists():
+        msg = f"Missing ranked summary CSV: {CHECKED_IN_RANKED_PATH}"
+        raise FileNotFoundError(msg)
+    df = pd.read_csv(CHECKED_IN_RANKED_PATH)
+    required = {"method", "scope", "Rank", "macro_average"}
+    missing = required - set(df.columns)
+    if missing:
+        msg = f"Ranked summary is missing required columns: {sorted(missing)!r}"
+        raise ValueError(msg)
+    df = df[(df["scope"] == "full") & (df["method"].isin(METHODS))].copy()
+    df["method_label"] = df["method"].map(METHOD_LABELS)
+    df["rank"] = df["Rank"].astype(int)
+    df["macro_points"] = df["macro_average"].astype(float) * 100
+    return df.sort_values(["method", "rank"]).reset_index(drop=True)
+
+
+def fig6_rank_scaling(ranked_df: pd.DataFrame, out: Path) -> None:
+    """Show how LoRA and DoRA scale with rank on the full-scope benchmark."""
+    plot_df = ranked_df.copy()
+    palette = {"LoRA": LORAX_ORANGE, "DoRA": DORAEMON_BLUE}
+
+    fig, ax_top = plt.subplots(figsize=(12.4, 5.8))
+
+    sns.lineplot(
+        data=plot_df,
+        x="rank",
+        y="macro_points",
+        hue="method_label",
+        hue_order=["LoRA", "DoRA"],
+        palette=palette,
+        marker="o",
+        markersize=10,
+        dashes=False,
+        linewidth=2.8,
+        ax=ax_top,
+    )
+    for method_label in ["LoRA", "DoRA"]:
+        method_df = plot_df[plot_df["method_label"] == method_label]
+        for row in method_df.itertuples(index=False):
+            ax_top.annotate(
+                f"{row.macro_points:.1f}",
+                (row.rank, row.macro_points),
+                textcoords="offset points",
+                xytext=(0, 8 if method_label == "LoRA" else -18),
+                ha="center",
+                va="bottom" if method_label == "LoRA" else "top",
+                fontsize=13,
+                fontweight="bold",
+                color=palette[method_label],
+            )
+
+    ax_top.set_ylabel("Macro-average accuracy (%)", fontsize=15)
+    ax_top.set_xlabel("Ranks", fontsize=15)
+    ax_top.set_xscale("log", base=2)
+    ax_top.set_xlim(3.5, 36)
+    ax_top.set_xticks([4, 8, 16, 32])
+    ax_top.set_xticklabels(["4", "8", "16", "32"])
+    ax_top.set_ylim(75.5, 80.6)
+    ax_top.legend(title="", frameon=True, loc="upper right")
+    ax_top.tick_params(axis="both", labelsize=15)
+    ax_top.grid(axis="x", visible=False)
+    ax_top.grid(axis="y", linestyle="--", linewidth=0.9, alpha=0.7)
+    sns.despine(ax=ax_top)
+
+    _save(fig, out, dpi=220)
 
 
 def print_summary(scope_summary: pd.DataFrame, task_summary: pd.DataFrame) -> None:
@@ -549,6 +629,7 @@ def generate_figures(
     df: pd.DataFrame,
     gains: pd.DataFrame,
     official_comparison: pd.DataFrame,
+    ranked_df: pd.DataFrame,
 ) -> None:
     """Generate the Seaborn figure suite."""
     fig1_macro_grouped(df, out_dir / "fig1_macro_grouped.png")
@@ -556,6 +637,7 @@ def generate_figures(
     fig3_dora_gains(gains, out_dir / "fig3_dora_gains.png")
     fig4_delta_distribution(gains, out_dir / "fig4_delta_distribution.png")
     fig5_official_comparison(official_comparison, out_dir / "fig5_official_comparison.png")
+    fig6_rank_scaling(ranked_df, out_dir / "fig6_rank_scaling.png")
 
 
 def main() -> None:
@@ -584,12 +666,11 @@ def main() -> None:
     scope_summary = build_scope_summary(df, gains)
     task_summary = build_task_summary(gains)
     official_comparison = build_official_comparison(df)
-
+    ranked_df = load_ranked_results()
     print("\nWriting analysis tables...")
     write_tables(out_dir, df, gains, scope_summary, task_summary, official_comparison)
-
     print("\nGenerating Seaborn figures...")
-    generate_figures(out_dir, df, gains, official_comparison)
+    generate_figures(out_dir, df, gains, official_comparison, ranked_df)
     print_summary(scope_summary, task_summary)
     print(f"All outputs written to: {out_dir.resolve()}\n")
 

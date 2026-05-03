@@ -60,6 +60,33 @@
   \end{tabular}%
 }
 
+\newcommand{\verdictValue}[2]{%
+  {\fontsize{36}{38}\selectfont\bfseries\textcolor{#2}{#1}}%
+}
+
+\newcommand{\verdictDelta}[2]{%
+  {\fontsize{27}{29}\selectfont\bfseries\textcolor{#2}{#1}}%
+}
+
+\newcommand{\verdictArrow}[2]{%
+  \makebox[1.35cm][c]{%
+    \textcolor{#1}{\raisebox{0.05ex}{\fontsize{28}{28}\selectfont\boldmath$\pmb{#2}$}}%
+  }%
+}
+
+\newcommand{\verdictDeltaBox}[2]{%
+  \makebox[1.85cm][r]{\verdictDelta{#1}{#2}}%
+}
+
+\newcommand{\verdictDeltaPctBox}[2]{%
+  \makebox[1.85cm][r]{\verdictDelta{#1}{#2}}%
+  {\fontsize{27}{29}\selectfont\bfseries\textcolor{#2}{\%}}%
+}
+
+\newcommand{\verdictLabel}[1]{%
+  {\fontsize{24}{26}\selectfont\bfseries\textcolor{Ink}{#1}}%
+}
+
 \newcommand{\shortcite}[1]{\raisebox{0.65ex}{\scriptsize\cite{#1}}}
 \newcommand{\dora}{\textcolor{DoraemonBlue}{\textbf{DoRA}}}
 \newcommand{\lora}{\textcolor{LoraxOrangeDark}{\textbf{LoRA}}}
@@ -188,24 +215,30 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 
 \begin{column}{\colwidth}
 
-\begin{alertblock}{Verdict: DoRA Pulls Ahead}
+\begin{alertblock}{Verdict: DoRA Improves Accuracy and Efficiency}
 \begingroup
 \setlength{\tabcolsep}{0pt}
-\renewcommand{\arraystretch}{1.0}
-\begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X@{}}
-\headlineMetric{77.41\%}{Full \lora{} macro} &
-\headlineMetric{79.20\%}{Full rank-halved \dora{} macro} &
-\headlineMetric{+1.79}{accuracy points} &
-\headlineMetric{6/1/1}{task wins/ties/losses}
-\end{tabularx}
-\endgroup
-\vspace{0.8ex}
+\renewcommand{\arraystretch}{1.95}
 \begin{center}
-\begin{minipage}{0.94\linewidth}
-\centering\footnotesize
-Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's qualitative improvement over \lora{} under our student-scale setup.
+\begin{minipage}{0.96\linewidth}
+\begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}p{0.22\linewidth} >{\centering\arraybackslash}X >{\centering\arraybackslash}p{0.08\linewidth} >{\centering\arraybackslash}X >{\centering\arraybackslash}p{0.18\linewidth} >{\centering\arraybackslash}p{0.08\linewidth}@{}}
+\verdictLabel{Accuracy} &
+\verdictValue{77.41\%}{LoraxOrange} &
+\verdictLabel{vs} &
+\verdictValue{79.20\%}{DoraemonBlue} &
+\verdictDeltaBox{+1.79}{Ink} &
+\verdictArrow{DoraemonBlue}{\uparrow}
+\\[1.4ex]
+\shortstack[c]{\verdictLabel{Trainable}\\\verdictLabel{Parameters}} &
+\verdictValue{0.83\%}{LoraxOrange} &
+\verdictLabel{vs} &
+\verdictValue{0.43\%}{DoraemonBlue} &
+\verdictDeltaPctBox{-48.2}{Ink} &
+\verdictArrow{DoraemonBlue}{\downarrow}
+\end{tabularx}
 \end{minipage}
 \end{center}
+\endgroup
 \end{alertblock}
 
 \begin{block}{The Adapter Duel}
@@ -214,7 +247,10 @@ Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}c@{\hspace{0.22cm}}c@{}}
 \raisebox{-0.5\height}{\includegraphics[height=9.7cm,keepaspectratio]{images/generated/the_lorax_cropped.png}} &
+\begin{tabular}{@{}c@{}}
+\textbf{\lora{} at 32 Ranks}\\[-0.2ex]
 \raisebox{-0.5\height}{\includegraphics[height=6.5cm,keepaspectratio]{fig1_lora_compact.png}}
+\end{tabular}
 \end{tabular}%
 }
 \vspace{-1.1ex}
@@ -224,7 +260,10 @@ Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's
 
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}c@{\hspace{0.22cm}}c@{}}
-\raisebox{-0.5\height}{\includegraphics[height=6.5cm,keepaspectratio]{fig1_dora_compact.png}} &
+\begin{tabular}{@{}c@{}}
+\textbf{\dora{} at 16 Ranks}\\[-0.2ex]
+\raisebox{-0.5\height}{\includegraphics[height=6.5cm,keepaspectratio]{fig1_dora_compact.png}}
+\end{tabular} &
 \raisebox{-0.5\height}{\includegraphics[height=9.7cm,keepaspectratio]{images/generated/doraemon_cropped.png}}
 \end{tabular}%
 }
@@ -248,42 +287,55 @@ Figures 1 and 2 show that full-scope, rank-halved \dora{} reproduced the paper's
 
 \begin{column}{\colwidth}
 
-\begin{block}{Official Reference Context}
+\begin{block}{Official Paper vs Full-Scope LLaMA2-7B Reproduction}
 \includegraphics[width=0.98\linewidth]{fig5_official_comparison.png}
+\vspace{-1.6ex}
 \tightcaption{3}{Our result matches the paper's direction: rank-halved \dora{} improves over \lora{}, but our 79.2\% \dora{} score remains below the official 80.5\% reference.}
 \end{block}
 
-\begin{exampleblock}{Interpretation}
-\begin{itemize}
-  \item The main paper-level claim \textbf{partially reproduced}: full-scope \dora{} beat full-scope \lora{}.
-  \item Scope ablations show the gain was \textbf{not automatic}: attention-only \dora{} underperformed \lora{} on 7/8 tasks; MLP-only \dora{} was roughly tied.
-  \item Key takeaway: \dora{} appears most useful when attention and MLP transformations adapt together, not as a replacement for one module group.
-  \item Key limitations: 15k subset instead of full data, seed 42 only, quantized Colab runs, and a local implementation rather than the exact official recipe.
-\end{itemize}
-\end{exampleblock}
+\vspace{-2ex}
+\begin{block}{\lora{} vs \dora{} Across Ranks}
+\centering
+\includegraphics[width=\linewidth]{fig6_rank_scaling.png}
+\vspace{-2ex}
+\tightcaption{4}{Macro-average accuracy across rank sizes, with the DoRA advantage shown in the lower panel.}
+\end{block}
 
+\vspace{-2ex}
 \begin{block}{Conclusion \& Future Work}
+\vspace{-2ex}
 \heading{Takeaways}
+\vspace{-2ex}
 \begin{itemize}
+  \setlength{\itemsep}{0.15ex}
+  \setlength{\parskip}{0pt}
   \item Full-scope \dora{} improved macro-average accuracy by \textbf{+1.79 points}.
   \item The reproduction supports the qualitative value of weight-decomposed low-rank adaptation.
   \item The ablation adds a caution: applying \dora{} narrowly can remove the benefit.
 \end{itemize}
 
+\vspace{-2ex}
 \heading{Next steps}
+\vspace{-2ex}
 \begin{itemize}
+  \setlength{\itemsep}{0.15ex}
+  \setlength{\parskip}{0pt}
   \item Train on the full \texttt{commonsense\_170k} dataset.
   \item Repeat all six conditions across multiple random seeds.
   \item Add parameter-count, GPU-memory, and wall-clock cost comparisons.
 \end{itemize}
+\vspace{-0.6ex}
 \end{block}
 
+\vspace{-2ex}
 \begin{block}{References}
+\vspace{-0.8ex}
 \tiny
 \setbeamertemplate{bibliography item}[text]
 \nocite{nvlabsdora,transformers}
 \bibliographystyle{plain}
 \bibliography{refs}
+\vspace{-0.8ex}
 \end{block}
 
 \end{column}
