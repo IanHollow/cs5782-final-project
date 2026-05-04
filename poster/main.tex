@@ -132,13 +132,13 @@
 \begin{column}{\colwidth}
 
 \begin{exampleblock}{Introduction}
-Full fine-tuning large language models is expensive. \lora{} reduces the cost by training low-rank adapter updates while freezing the base model.\shortcite{hu2022lora}
+Full fine-tuning large language models is expensive. \lora{} made fine-tuning cheaper by training low-rank updates while freezing the base model. \dora{} makes this process even cheaper.
 
-\compactheading{DoRA}
+\compactheading{DoRA (Weight-Decomposed Low-Rank Adaptation)}
 \begin{itemize}
   \setlength{\itemsep}{0.05ex}
   \setlength{\parskip}{0pt}
-  \item \dora{} decomposes pretrained weights into \textbf{magnitude} and \textbf{direction}.\shortcite{liu2024dora}
+  \item \dora{} decomposes pretrained weights into \textbf{magnitude} and \textbf{direction}.
   \item Direction receives a \lora{}-style low-rank update; magnitude is learned separately.
 \end{itemize}
 
@@ -146,8 +146,8 @@ Full fine-tuning large language models is expensive. \lora{} reduces the cost by
 \begin{itemize}
   \setlength{\itemsep}{0.05ex}
   \setlength{\parskip}{0pt}
-  \item Does \dora{} improve commonsense accuracy over a same-scope \lora{} baseline?
-  \item Reproduce the LLaMA2-7B trend and test attention-only, MLP-only, and full-scope adapters.
+  \item Maximize fine-tuning performance with \dora{} while using fewer parameters.
+  \item Test whether \dora{} beats \lora{} at the same rank and where it helps most: attention, MLP, or full-scope adapters.
 \end{itemize}
 \end{exampleblock}
 
@@ -156,7 +156,7 @@ Full fine-tuning large language models is expensive. \lora{} reduces the cost by
 \begin{center}
 \compactheading{\textcolor{Ink}{\dora{} Adapter Mechanics}}
 \vspace{0.35ex}
-\includegraphics[height=12cm,keepaspectratio]{images/generated/dora_overview_cropped.png}%
+\includegraphics[height=15cm,keepaspectratio]{images/generated/dora_overview_cropped.png}%
 \end{center}
 
 \begin{block}{Methodology}
@@ -189,17 +189,7 @@ Full fine-tuning large language models is expensive. \lora{} reduces the cost by
 
 \vspace{-0.8ex}
 
-\small
-\begin{tabularx}{\linewidth}{>{\bfseries}l X X}
-\toprule
-Scope & Target modules & Purpose \\
-\midrule
-Full & \texttt{q,k,v,up,down} projections & Paper-level reproduction \\
-Attention only & \texttt{q,k,v} projections & Test routing/context layers \\
-MLP only & \texttt{up,down} projections & Test feed-forward layers \\
-\bottomrule
-\end{tabularx}
-\normalsize
+The ablation compares full (\texttt{q,k,v,up,down}), attention-only (\texttt{q,k,v}), and MLP-only (\texttt{up,down}) adapters to test whether DoRA works best when applied broadly or within a single layer group.
 
 
 \end{column}
@@ -322,20 +312,20 @@ Given a short activity description, select the most plausible four-way continuat
 \begin{itemize}
   \setlength{\itemsep}{0.15ex}
   \setlength{\parskip}{0pt}
-  \item Full-scope \dora{} improved macro-average accuracy by \textbf{+1.79 points}.
-  \item The reproduction supports the qualitative value of weight-decomposed low-rank adaptation.
-  \item The ablation adds a caution: applying \dora{} narrowly can remove the benefit.
+  \item Full-scope \dora{} improved macro-average accuracy by \textbf{+1.79 points} while using fewer trainable parameters.
+  \item \lora{} is still strong at higher ranks, but still performs worse than \dora{}.
+  \item \dora{} worked best when applied fully across the transformer.
 \end{itemize}
 
 \vspace{-2ex}
-\heading{Next steps}
+\heading{Potential Next steps}
 \vspace{-2ex}
 \begin{itemize}
   \setlength{\itemsep}{0.15ex}
   \setlength{\parskip}{0pt}
-  \item Train on the full \texttt{commonsense\_170k} dataset.
-  \item Repeat all six conditions across multiple random seeds.
-  \item Add parameter-count, GPU-memory, and wall-clock cost comparisons.
+  \item Train on the full \texttt{commonsense\_170k} dataset to address small dataset worries.
+  \item Repeat the LoRA and DoRA variants across multiple random seeds to verify consistency.
+  \item Check more rank comparisons at full scale to verify the trend across more ranks.
 \end{itemize}
 \vspace{-0.6ex}
 \end{block}
@@ -345,7 +335,7 @@ Given a short activity description, select the most plausible four-way continuat
 \vspace{-0.8ex}
 \tiny
 \setbeamertemplate{bibliography item}[text]
-\nocite{nvlabsdora,transformers}
+\nocite{nvlabsdora,transformers,hu2022lora,liu2024dora}
 \bibliographystyle{plain}
 \bibliography{refs}
 \vspace{-0.8ex}

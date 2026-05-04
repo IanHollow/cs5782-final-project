@@ -5,15 +5,15 @@ Cornell University - CS 5782 / CS 4782 Intro to Deep Learning
 
 ## Main Takeaway
 
-Full-scope, rank-halved DoRA reproduced the paper's core trend by improving over LoRA on Llama-2-7B commonsense reasoning, but our ablations show the gain depends strongly on where adapters are applied.
+Full fine-tuning is expensive. LoRA made fine-tuning cheaper by training low-rank updates, and DoRA pushes that idea further by separating magnitude from direction. In our commonsense reasoning reproduction, full-scope DoRA improved over LoRA while using fewer trainable parameters, and the ablations show that the gain depends strongly on where adapters are applied.
 
 ## Motivation
 
 - Full fine-tuning large language models is expensive in memory, storage, and training time.
-- LoRA reduces cost by training low-rank adapter updates while freezing the base model.
-- The limitation: a low-rank update alone may not fully capture how pretrained weights should change.
-- Our goal: test whether DoRA improves commonsense reasoning accuracy over a same-scope LoRA baseline.
-- Our added question: does DoRA help more in attention layers, MLP layers, or only when applied broadly?
+- LoRA reduced that cost by training low-rank adapter updates while freezing the base model.
+- DoRA makes fine-tuning even cheaper by decomposing pretrained weights into magnitude and direction.
+- Our goal was to maximize fine-tuning performance with DoRA while using fewer parameters.
+- We also tested whether DoRA beats LoRA at the same rank and whether it helps most in attention layers, MLP layers, or only when applied broadly.
 
 ## Paper Idea
 
@@ -74,17 +74,18 @@ Macro-average accuracy across rank sizes, with the DoRA advantage shown in the l
 
 ## Conclusion
 
-- Full-scope DoRA improved macro-average accuracy by **+1.79 points** over LoRA under our student-scale setup.
-- The reproduction supports the qualitative claim that DoRA can improve parameter-efficient fine-tuning.
-- Our ablations add a caution: applying DoRA narrowly can remove the benefit or make performance worse.
-- The project produced a reproducible CLI, Colab runner, adapter implementation, evaluation pipeline, and analysis figures.
+- Full-scope DoRA improved macro-average accuracy by **+1.79 points** over LoRA under our student-scale setup while using fewer trainable parameters.
+- The reproduction supports the claim that DoRA can improve parameter-efficient fine-tuning, not just reduce its cost.
+- LoRA is still strong at higher ranks, so the advantage is not universal across all adapter sizes.
+- The best results came from applying DoRA broadly across the transformer rather than only to one module group.
 - Validation: `uv run pytest -q` passed with **59 passed, 1 skipped**.
 
 ## Future Work
 
 - Train on the full `commonsense_170k.json` dataset instead of the 15k subset.
-- Repeat all six conditions across multiple random seeds.
-- Report trainable parameter counts, GPU memory, and wall-clock time for each condition.
+- Repeat the LoRA and DoRA variants across multiple random seeds.
+- Test more layer-placement variants, especially attention-only LoRA, to understand why it scored highest in some runs.
+- Recheck the rank comparisons at full scale so the performance trend across ranks is better verified.
 
 ## References
 

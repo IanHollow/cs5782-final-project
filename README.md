@@ -2,7 +2,13 @@
 
 ## Introduction
 
-This GitHub repository contains our CS 4782/5782 final project reimplementation of *DoRA: Weight-Decomposed Low-Rank Adaptation*. The paper's main contribution is to improve LoRA by decomposing pretrained weights into magnitude and direction components, then adapting the direction with a low-rank update while learning magnitude separately.
+Full fine-tuning large language models is expensive. LoRA made parameter-efficient fine-tuning practical by training low-rank updates while freezing the base model. DoRA pushes this idea further by decomposing pretrained weights into magnitude and direction, then learning the magnitude separately while adapting the direction with a low-rank update.
+
+This project reimplements *DoRA: Weight-Decomposed Low-Rank Adaptation* for commonsense reasoning and asks three questions:
+
+- Can DoRA match or exceed LoRA accuracy with fewer trainable parameters?
+- Does DoRA outperform LoRA at the same rank?
+- Does DoRA help most in attention layers, MLP layers, or only when applied broadly across the transformer?
 
 ## Chosen Result
 
@@ -72,7 +78,11 @@ The main paper-level claim partially reproduces in the full-scope setting, while
 
 ## Conclusion
 
-This reimplementation confirms the core DoRA-vs-LoRA improvement in the full adapter setting under our student-scale setup, but the layer-scope ablations show that DoRA's magnitude/direction split is most useful when applied broadly. The repo is organized so future runs can swap models, runtimes, datasets, and benchmark subsets without changing code.
+Our results show that DoRA achieves higher accuracy than LoRA in the full-scope setting while using fewer trainable parameters. That supports the paper's main claim that weight decomposition can make fine-tuning cheaper without sacrificing performance. At the same time, the scope ablations show that LoRA is still strong at higher ranks and that DoRA works best when it is applied across the full transformer rather than only a narrow subset of layers.
+
+## Future Work
+
+The most useful next step is to run the same comparisons on the full `commonsense_170k.json` dataset and repeat the experiments across multiple random seeds. That would help verify whether the rank trends hold at larger scale and clarify why attention-only LoRA performed so well compared with the broader full-scope setup.
 
 ## References
 
