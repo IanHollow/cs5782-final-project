@@ -551,6 +551,7 @@ def load_ranked_results() -> pd.DataFrame:
 def fig6_rank_scaling(ranked_df: pd.DataFrame, out: Path) -> None:
     """Show how LoRA and DoRA scale with rank on the full-scope benchmark."""
     plot_df = ranked_df.copy()
+    plot_df = plot_df[~((plot_df["method"] == "lora") & (plot_df["rank"] == 32))].copy()
     palette = {"LoRA": LORAX_ORANGE, "DoRA": DORAEMON_BLUE}
 
     fig, ax_top = plt.subplots(figsize=(14.8, 6.9))
@@ -586,9 +587,9 @@ def fig6_rank_scaling(ranked_df: pd.DataFrame, out: Path) -> None:
     ax_top.set_ylabel("Macro-average accuracy (%)", fontsize=19)
     ax_top.set_xlabel("Ranks", fontsize=19)
     ax_top.set_xscale("log", base=2)
-    ax_top.set_xlim(3.5, 36)
-    ax_top.set_xticks([4, 8, 16, 32])
-    ax_top.set_xticklabels(["4", "8", "16", "32"])
+    ax_top.set_xlim(3.5, 18.5)
+    ax_top.set_xticks([4, 8, 16])
+    ax_top.set_xticklabels(["4", "8", "16"])
     ax_top.set_ylim(75.5, 80.6)
     ax_top.legend(title="", frameon=True, loc="upper right")
     ax_top.tick_params(axis="both", labelsize=19)
