@@ -163,22 +163,22 @@ Full fine-tuning large language models is expensive. \lora{} reduces the cost by
 }
 
 \begin{block}{Methodology}
-\begin{columns}[T,totalwidth=\linewidth]
-\begin{column}{0.14\linewidth}
+\begin{columns}[c,totalwidth=\linewidth]
+\begin{column}{0.19\linewidth}
 \centering
 \includegraphics[width=0.99\linewidth]{images/generated/llama_logo.png}
 \end{column}
-\begin{column}{0.84\linewidth}
+\begin{column}{0.79\linewidth}
 \begin{itemize}
   \normalsize
-  \setlength{\itemsep}{0pt}
+  \setlength{\itemsep}{2pt}
   \setlength{\parskip}{0pt}
-  \item We used 15k examples, not the full 170k, because compute was limited.
-  \item Otherwise, we followed the \dora{} paper and reported per-task plus macro-average accuracy.
+  \item Trained on 15k examples instead of 170k due to compute constraints.
+  \item We otherwise followed the \dora{} paper setup, reporting per-task and macro-average accuracy across all eight benchmarks.
 \end{itemize}
 \end{column}
 \end{columns}
-\vspace{-1.0ex}
+\vspace{1.2ex}
 \resultnote{Controlled comparison}{Frozen base model, adapter-only checkpoints, 3 epochs, cutoff length 256, seed 42. Settings: \lora{} r=32, LR=3e-4; rank-halved \dora{} r=16, LR=2e-4.}
 \end{block}
 
