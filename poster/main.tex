@@ -105,9 +105,9 @@
 % Title
 % ====================
 
-\title{\textcolor{DoraemonBlue}{DoRA}emon's Secret Tool for an \textcolor{green!70!white}{A+} in Deep Learning: Weight-Decomposed Fine-Tuning}
+\title{\textcolor{DoraemonBlue}{DoRA}emon's Secret Tool for an \textcolor{green!70!white}{A+} in Deep Learning}
+\subtitle{Weight-Decomposed Fine-Tuning}
 \author{Ian Holloway \and Younghyun Jung \and Swathi Selvam \and Shashwat Modi}
-\institute{Cornell University \samelineand CS 5782 / CS 4782 Intro to Deep Learning}
 
 \footercontent{%
   \footnotesize
@@ -160,23 +160,23 @@ Full fine-tuning large language models is expensive. \lora{} reduces the cost by
 \end{center}
 
 \begin{block}{Methodology}
-\begin{columns}[c,totalwidth=\linewidth]
-\begin{column}{0.19\linewidth}
+\begin{columns}[T,totalwidth=\linewidth]
+\begin{column}{0.23\linewidth}
 \centering
-\includegraphics[width=0.99\linewidth]{images/generated/llama_logo.png}
+\includegraphics[width=0.68\linewidth]{images/generated/google_colab_cropped.png}
+\par\vspace{1.5ex}
+\includegraphics[width=0.74\linewidth]{images/generated/llama_logo.png}
 \end{column}
-\begin{column}{0.79\linewidth}
+\begin{column}{0.75\linewidth}
 \begin{itemize}
-  \normalsize
-  \setlength{\itemsep}{2pt}
+  \setlength{\itemsep}{1.5pt}
   \setlength{\parskip}{0pt}
   \item Trained on 15k examples instead of 170k due to compute constraints.
-  \item We otherwise followed the \dora{} paper setup, reporting per-task and macro-average accuracy across all eight benchmarks.
+  \item We otherwise followed the \dora{} paper setup with a frozen base model, adapter-only checkpoints, 3 epochs, cutoff length 256, and seed 42.
+  \item Settings: \lora{} used rank 32 at LR=3e-4; rank-halved \dora{} used rank 16 at LR=2e-4.
 \end{itemize}
 \end{column}
 \end{columns}
-\vspace{1.2ex}
-\resultnote{Controlled comparison}{Frozen base model, adapter-only checkpoints, 3 epochs, cutoff length 256, seed 42. Settings: \lora{} r=32, LR=3e-4; rank-halved \dora{} r=16, LR=2e-4.}
 \end{block}
 
 \vspace{-1.6ex}
@@ -268,10 +268,10 @@ MLP only & \texttt{up,down} projections & Test feed-forward layers \\
 \tightcaption{2}{The full-scope bars are outlined: rank-halved \dora{} improves macro accuracy from 77.4\% to 79.2\%.}
 \end{block}
 
-\begin{exampleblock}{Benchmark with Largest \dora{} Gain: HellaSwag (\textbf{+6.0 pts})}
-\heading{Task Format --- Grounded Activity Completion}
+\begin{exampleblock}{Benchmark Example}
+\heading{HellaSwag --- Grounded Activity Completion (\textbf{+6.0 pts})}
 \small
-Given a short activity description, select the most plausible four-way continuation. Requires grounded physical-world commonsense.
+Given a short activity description, select the most plausible four-way continuation. This benchmark produced the largest full-scope \dora{} gain, improving by \textbf{+6.0 points}. Requires grounded physical-world commonsense.
 
 \vspace{0.7ex}
 \noindent\colorbox{SoftGray}{\parbox{0.94\linewidth}{%

@@ -55,6 +55,7 @@
 
 \setbeamerfont{headline}{family=\PosterSans}
 \setbeamerfont{headline title}{size=\Huge,series=\bfseries}
+\setbeamerfont{headline subtitle}{size=\Large,series=\mdseries}
 \setbeamerfont{headline author}{size=\Large}
 \setbeamerfont{headline institute}{size=\normalsize}
 \setbeamerfont{block title}{family=\PosterSans,size=\large,series=\bfseries}
@@ -162,6 +163,9 @@
         \centering
         \ifx \inserttitle \empty \else
         {\usebeamerfont{headline title}\usebeamercolor[fg]{headline title}\inserttitle\\[0.5ex]}
+        \fi
+        \ifx \insertsubtitle \empty \else
+        {\usebeamerfont{headline subtitle}\usebeamercolor[fg]{headline subtitle}\insertsubtitle\\[0.75ex]}
         \fi
         \ifx \beamer@shortauthor \empty \else
         {\usebeamerfont{headline author}\usebeamercolor[fg]{headline author}\insertauthor\\[1ex]}
