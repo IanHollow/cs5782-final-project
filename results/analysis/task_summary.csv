@@ -1,9 +1,0 @@
-task,task_label,best_scope,best_scope_label,best_delta_points,worst_scope,worst_scope_label,worst_delta_points,positive_scopes
-boolq,BoolQ,full,Full,1.253822630000001,attention_only,Attention only,-0.7033639199999997,2
-piqa,PIQA,full,Full,0.05440695999999745,mlp_only,MLP only,-1.5233949900000043,1
-social_i_qa,Social IQA,full,Full,0.0,mlp_only,MLP only,-1.7911975400000002,0
-hellaswag,HellaSwag,full,Full,5.994818000000002,mlp_only,MLP only,-2.370045799999998,1
-winogrande,WinoGrande,mlp_only,MLP only,1.2628255700000035,attention_only,Attention only,-1.4206787699999945,1
-ARC-Easy,ARC-Easy,mlp_only,MLP only,1.5789473700000056,attention_only,Attention only,0.17543859999999967,3
-ARC-Challenge,ARC-Challenge,mlp_only,MLP only,5.016722409999996,attention_only,Attention only,-2.6755852800000035,2
-openbookqa,OpenBookQA,full,Full,2.400000000000002,attention_only,Attention only,-2.8000000000000025,1

@@ -1,0 +1,17 @@
+train_data_path = "data/commonsense_15k.json"
+task_names = [
+    "boolq",
+    "piqa",
+]
+rank = 4
+alpha = 8
+dropout = 0.05
+max_train_samples = 512
+num_epochs = 1
+val_set_size = 16
+save_steps = 20
+eval_steps = 20
+weight_decay = 0.0
+train_on_inputs = false
+seed = 42
+max_new_tokens = 8

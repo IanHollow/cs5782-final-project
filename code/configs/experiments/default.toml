@@ -1,0 +1,22 @@
+train_data_path = "data/commonsense_15k.json"
+task_names = [
+    "boolq",
+    "piqa",
+    "social_i_qa",
+    "hellaswag",
+    "winogrande",
+    "ARC-Easy",
+    "ARC-Challenge",
+    "openbookqa",
+]
+rank = 8
+alpha = 16
+dropout = 0.05
+num_epochs = 3
+val_set_size = 120
+save_steps = 80
+eval_steps = 80
+weight_decay = 0.0
+train_on_inputs = false
+seed = 42
+max_new_tokens = 8

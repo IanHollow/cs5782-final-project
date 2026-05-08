@@ -1,0 +1,4 @@
+per_device_batch_size = 1
+effective_batch_size = 1
+gradient_checkpointing = false
+use_4bit = false

@@ -2,31 +2,26 @@
 
 ## Introduction
 
-Full fine-tuning large language models is expensive. LoRA made parameter-efficient fine-tuning practical by training low-rank updates while freezing the base model. DoRA pushes this idea further by decomposing pretrained weights into magnitude and direction, then learning the magnitude separately while adapting the direction with a low-rank update.
-
-This project reimplements *DoRA: Weight-Decomposed Low-Rank Adaptation* for commonsense reasoning and asks three questions:
-
-- Can DoRA match or exceed LoRA accuracy with fewer trainable parameters?
-- Does DoRA outperform LoRA at the same rank?
-- Does DoRA help most in attention layers, MLP layers, or only when applied broadly across the transformer?
+This repository contains a CS 4782 / CS 5782 final project reimplementation of *DoRA: Weight-Decomposed Low-Rank Adaptation*. The paper's main contribution is a parameter-efficient fine-tuning method that separates weight magnitude from direction, improving LoRA-style adaptation while training fewer parameters.
 
 ## Chosen Result
 
-We reproduced the paper's commonsense reasoning result from Table 1 / the official NVlabs commonsense table: rank-halved DoRA should improve average accuracy over a same-scope LoRA baseline on BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, and OpenBookQA. We also added attention-only and MLP-only ablations to test where the DoRA update helps most.
+We target the paper's commonsense reasoning result from Table 1, where rank-halved DoRA improves average accuracy over LoRA on BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, and OpenBookQA. We also include attention-only and MLP-only ablations to test where the DoRA update helps most.
 
 ## GitHub Contents
 
-- `code/`: Python package, CLI, tests, and TOML configs for training/evaluation.
-- `data/`: local training data, normalized benchmark files, and dataset notes.
-- `results/`: checked-in analysis figures/tables plus ignored fresh run outputs.
-- `poster/` and `report/`: placeholders for the final course PDFs.
-- `notebooks/`: Colab bootstrap script and notebook runner.
+- `code/`: Python package, CLI, tests, configs, and analysis script for the reimplementation.
+- `data/`: the 15k commonsense training set, normalized benchmark files, and dataset notes.
+- `results/`: checked-in figures/tables used by the README, poster, and report.
+- `poster/`: final poster PDF plus the LaTeX source used to build it.
+- `report/`: placeholder for the final report PDF.
+- `code/notebooks/`: optional Colab quickstart material for GPU runs.
 
 ## Re-implementation Details
 
-The implementation uses Hugging Face `transformers` for model/tokenizer loading and repo-owned PyTorch modules for LoRA/DoRA adapter injection, checkpointing, and evaluation. The default practical setup fine-tunes `meta-llama/Llama-2-7b-hf` on `data/commonsense_15k.json`, evaluates the eight commonsense tasks, and compares `lora` vs `dora` across `full`, `attention_only`, and `mlp_only` scopes.
+The implementation uses Hugging Face `transformers` for model/tokenizer loading and repo-owned PyTorch modules for LoRA/DoRA adapter injection, checkpointing, and evaluation. The default practical setup fine-tunes `meta-llama/Llama-2-7b-hf` on `data/commonsense_15k.json`, evaluates eight commonsense tasks, and compares `lora` vs `dora` across `full`, `attention_only`, and `mlp_only` adapter scopes.
 
-Key modifications from the paper are student-scale compute choices: a 15k training subset by default, Colab-focused quantized runtime presets, and additional scope ablations. Metrics are task accuracy plus macro-average accuracy across the eight benchmarks.
+Compared with the original paper, this repo uses student-scale compute choices: a 15k training subset, Colab-focused 4-bit runtime settings, and additional scope ablations. Metrics are task accuracy and macro-average accuracy across the benchmark suite.
 
 ## Reproduction Steps
 
@@ -44,7 +39,7 @@ uv run python -m dora_repro.cli train \
   --model llama2_7b \
   --method dora \
   --scope full \
-  --runtime colab_l4_llama \
+  --runtime colab_a100_40gb_llama \
   --experiment paper_colab
 ```
 
@@ -55,7 +50,7 @@ uv run python -m dora_repro.cli evaluate --run-dir results/runs/<run_name>
 uv run python -m dora_repro.cli summarize --results-dir results/runs --output-dir results/summary
 ```
 
-Run all six main variants by combining `--method {lora,dora}` with `--scope {full,attention_only,mlp_only}`. A Google Colab L4 or A100 GPU is recommended for 7B runs; `tiny_debug` plus `debug_quick` is intended only for CPU/local smoke tests.
+Run the six main variants by combining `--method {lora,dora}` with `--scope {full,attention_only,mlp_only}`. A Colab A100-class GPU is recommended for 7B runs; `tiny_debug` is intended only for local smoke tests.
 
 Quality checks:
 
@@ -68,21 +63,17 @@ uv run pytest
 
 ## Results/Insights
 
-Our checked-in Llama-2-7B reproduction results are in `results/analysis/summary_table.csv`, with a deeper breakdown in `results/analysis/scope_summary.csv` and `results/analysis/task_summary.csv`. Full-scope, rank-halved DoRA improves over LoRA from `0.7741` to `0.7920` macro accuracy, a gain of about `+1.79` points across six positive task deltas, one tie, and one loss; attention-only DoRA underperforms LoRA by about `-1.50` points; MLP-only DoRA is roughly tied, at about `+0.15` points.
+The checked-in Llama-2-7B reproduction results are in `results/summary_table.csv`, with additional breakdowns in `results/scope_summary.csv` and `results/task_summary.csv`. Full-scope, rank-halved DoRA improves over LoRA from `0.7741` to `0.7920` macro accuracy, a gain of about `+1.79` points; attention-only DoRA underperforms LoRA by about `-1.50` points; MLP-only DoRA is roughly tied, at about `+0.15` points.
 
-![Macro accuracy by method and scope](results/analysis/fig1_macro_grouped.png)
+![Macro accuracy by method and scope](results/fig1_macro_grouped.png)
 
-![DoRA gains by task and scope](results/analysis/fig3_dora_gains.png)
+![DoRA gains by task and scope](results/fig3_dora_gains.png)
 
-The main paper-level claim partially reproduces in the full-scope setting, while the ablations suggest the benefit is not uniform across isolated layer groups. `results/analysis/fig4_delta_distribution.png` shows that full-scope DoRA is the most consistent condition, and `results/analysis/fig5_official_comparison.png` places the full-scope result beside the paper's LLaMA2-7B LoRA and rank-halved DoRA-dagger reference rows.
+The main paper-level claim partially reproduces in the full-scope setting, while the ablations suggest the benefit is not uniform across isolated layer groups.
 
 ## Conclusion
 
-Our results show that DoRA achieves higher accuracy than LoRA in the full-scope setting while using fewer trainable parameters. That supports the paper's main claim that weight decomposition can make fine-tuning cheaper without sacrificing performance. At the same time, the scope ablations show that LoRA is still strong at higher ranks and that DoRA works best when it is applied across the full transformer rather than only a narrow subset of layers.
-
-## Future Work
-
-The most useful next step is to run the same comparisons on the full `commonsense_170k.json` dataset and repeat the experiments across multiple random seeds. That would help verify whether the rank trends hold at larger scale and clarify why attention-only LoRA performed so well compared with the broader full-scope setup.
+DoRA achieves higher accuracy than LoRA in the full-scope setting while using fewer trainable parameters, supporting the paper's central claim at student-project scale. The ablations also show that DoRA works best when applied broadly across the transformer instead of only to attention or MLP layers.
 
 ## References
 

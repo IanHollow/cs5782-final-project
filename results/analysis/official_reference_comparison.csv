@@ -1,5 +1,0 @@
-source,method,method_label,paper_method,rank,params_percent,macro_average,macro_points,boolq,piqa,social_i_qa,hellaswag,winogrande,ARC-Easy,ARC-Challenge,openbookqa
-DoRA paper Table 1,lora,LoRA,LoRA,32,0.83,0.776,77.60000000000001,0.698,0.799,0.795,0.836,0.826,0.798,0.647,0.81
-DoRA paper Table 1,dora,DoRA,DoRA-dagger (Ours),16,0.43,0.805,80.5,0.72,0.831,0.799,0.891,0.83,0.845,0.71,0.812
-Reproduction,lora,LoRA,LoRA,32,,0.7740961743,77.40961743,0.8186544343,0.7867247008,0.7548618219,0.7639912743,0.7521704815,0.8614035088,0.6889632107,0.766
-Reproduction,dora,DoRA,DoRA,16,,0.7920407819,79.20407819,0.8311926606,0.7872687704,0.7548618219,0.8239394543,0.7513812155,0.8719298246,0.7257525084,0.79

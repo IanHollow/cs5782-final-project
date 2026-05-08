@@ -1,9 +1,15 @@
 # Poster
 
-Place the final in-class presentation poster PDF here as:
+The final in-class presentation poster PDF is:
 
 ```text
 poster/final-poster.pdf
 ```
 
-The final PDF is not currently checked in. This placeholder keeps the required deliverable directory visible until the submitted poster file is available.
+The LaTeX source is kept in this directory so the poster can be rebuilt if needed. From `poster/`, run:
+
+```bash
+make
+```
+
+Generated LaTeX build byproducts are ignored and should not be committed.

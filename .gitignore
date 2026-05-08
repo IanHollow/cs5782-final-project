@@ -216,6 +216,11 @@ __marimo__/
 .streamlit/secrets.toml
 
 ### Project generated artifacts
+# Local OS/editor files.
+.DS_Store
+.idea/
+.direnv/
+
 # Local dataset/model caches and heavyweight experiment reruns.
 data/cache/
 data/hf-cache/
@@ -229,6 +234,19 @@ mlruns/
 results/runs/
 results/smoke-test/
 analysis_output/
+
+# Poster source is tracked; generated LaTeX build outputs are not.
+poster/*.aux
+poster/*.bbl
+poster/*.blg
+poster/*.fdb_latexmk
+poster/*.fls
+poster/*.log
+poster/*.nav
+poster/*.out
+poster/*.snm
+poster/*.synctex.gz
+poster/*.toc
 
 # Course PDFs are deliverables and should remain trackable when added.
 !poster/*.pdf
