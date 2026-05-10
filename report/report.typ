@@ -27,7 +27,7 @@
     ),
     (
       name: "Shashwat Modi",
-      department: [MPS Data Sci. & Appl. Stats.],
+      department: [MPS DS & Appl. Stats.],
       organization: [Cornell University],
       location: [Ithaca, NY, USA],
       email: "sm3225@cornell.edu",
@@ -55,7 +55,9 @@
 
 #show figure.caption.where(kind: image): set align(center)
 
-#align(center)[*Code:* #link("https://github.com/IanHollow/cs5782-final-project")[github.com/IanHollow/cs5782-final-project]]
+#align(
+  center,
+)[*Code:* #link("https://github.com/IanHollow/cs5782-final-project")[github.com/IanHollow/cs5782-final-project]]
 
 = Introduction
 
@@ -79,20 +81,18 @@ We chose this result because it is quantitative, directly tied to the paper's ma
   placement: none,
   caption: [Experimental setup. The 15k subset is the deliberate scale reduction; the model family, benchmark suite, rank-halved comparison, and metric follow the paper's commonsense setting.],
   table(
-    columns: (0.30fr, 0.70fr),
+    columns: (0.25fr, 0.70fr),
     align: (left, left),
     stroke: (_, y) => if y <= 1 { (top: 0.45pt) } else { none },
     table.header[Component][Choice],
     [Model], [Meta LLaMA-2-7B, frozen base weights],
-    [Training data],
-    [Commonsense 15k subset instead of the paper's 170k training set],
+    [Training data], [Commonsense 15k instead of the paper's 170k version],
 
     [Benchmarks],
     [BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, OpenBookQA],
 
-    [Runtime], [Google Colab A100 preset, 4-bit NF4 loading],
-    [Main comparison],
-    [LoRA rank 32, learning rate 3e-4 vs. DoRA rank 16, learning rate 2e-4],
+    [Runtime], [Google Colab A100 with 4-bit NF4],
+    [Main comp.], [LoRA rank 32 vs. DoRA rank 16],
 
     [Training/eval],
     [3 epochs, cutoff length 256, seed 42, adapter-only checkpoints, per-task and macro accuracy],
@@ -111,7 +111,7 @@ We kept the comparison controlled: same base model, 15k subset, prompt/evaluatio
   placement: none,
   caption: [Paper result versus our full-scope reproduction. Macro is unweighted average accuracy over the eight commonsense tasks.],
   table(
-    columns: (0.43fr, 0.13fr, 0.18fr, 0.18fr),
+    columns: (0.4fr, 0.15fr, 0.2fr, 0.2fr),
     align: (left, right, right, right),
     stroke: (_, y) => if y <= 1 { (top: 0.45pt) } else { none },
     table.header[Condition][Rank][Macro][Trainable],
@@ -126,20 +126,15 @@ The headline result directionally reproduces the paper's central finding. Full-s
 
 #figure(
   placement: none,
-  caption: [Scope and rank ablations. W/T/L counts tasks where DoRA wins, ties, or loses against matched LoRA.],
+  caption: [Scope ablation],
   table(
-    columns: (0.32fr, 0.17fr, 0.17fr, 0.17fr, 0.17fr),
-    align: (left, right, right, right, right),
+    columns: (0.3fr, 0.2fr, 0.2fr, 0.2fr),
+    align: (left, right, right, right),
     stroke: (_, y) => if y <= 1 { (top: 0.45pt) } else { none },
-    table.header[Scope][LoRA][DoRA][Delta][W/T/L],
-    [Full], [77.41%], [79.20%], [*+1.79*], [6/1/1],
-    [Attention], [79.59%], [78.09%], [-1.50], [1/0/7],
-    [MLP], [79.05%], [79.20%], [+0.15], [4/0/4],
-    table.hline(),
-    [Rank test], [Trainable], [Macro], [Delta], [Note],
-    [DoRA r16], [0.429%], [79.20%], [--], [paper-style],
-    [DoRA r8], [0.221%], [*80.02%*], [+0.82], [one-seed],
-    [DoRA r4], [0.117%], [79.80%], [+0.60], [smaller],
+    table.header[Scope][LoRA][DoRA][Delta],
+    [Full], [77.41%], [79.20%], [*+1.79*],
+    [Attention], [79.59%], [78.09%], [-1.50],
+    [MLP], [79.05%], [79.20%], [+0.15],
   ),
 ) <tab:ablations>
 
