@@ -35,7 +35,7 @@
   ),
   index-terms: (),
   paper-size: "us-letter",
-  bibliography: bibliography("/report/refs.bib"),
+  bibliography: bibliography("refs.bib"),
   figure-supplement: [Figure],
   body-size: 11pt,
   body-leading: 0.40em,
@@ -61,13 +61,13 @@
 
 = Introduction
 
-Full fine-tuning adapts every parameter of a large language model, making each downstream task expensive to train and store. Parameter-efficient fine-tuning (PEFT) instead freezes the base model and trains small adapter modules. Our project reimplements a central result from *DoRA: Weight-Decomposed Low-Rank Adaptation* by Liu et al. @liu2024dora, which extends LoRA @hu2022lora by separating the direction and magnitude of an adapted weight.
+Full fine-tuning adapts every parameter of a large language model (LLM), making each downstream task expensive to train and store. Parameter-efficient fine-tuning (PEFT) instead freezes the base model and trains small adapter modules. Our project reimplements a central result from the paper *DoRA: Weight-Decomposed Low-Rank Adaptation* by Liu et al. @liu2024dora, which extends LoRA: Low-Rank Adaptation of Large Language Models @hu2022lora by separating the direction and magnitude of an adapted weight. The LoRA baseline in the DoRA paper uses hyperparameters from subsequent paper @llmadapters following the original LoRA paper.
 
 LoRA keeps a pretrained weight $W$ frozen and learns a low-rank residual $Delta W = B A$. DoRA keeps the low-rank directional update but learns a per-output magnitude vector $m$:
 
 $ W' = m dot (W + Delta W) / norm(W + Delta W). $
 
-Our contribution is a controlled student-scale reproduction with repo-owned PEFT code rather than a wrapper-based experiment. We implemented both LoRA and DoRA from scratch in PyTorch, reproduced the paper's main LoRA-vs-DoRA comparison in the same benchmark family, and added scope and rank ablations to test when DoRA helps.
+Our contribution is a reproduction of the DoRA adjusting the fine tuning dataset size and number of LLM tested based on compute and time constraints. We implemented both LoRA and DoRA from scratch in PyTorch, reproduced the DoRA paper's main LoRA-vs-DoRA comparison on the Meta's LLaMA-2-7B model, and added scope and rank ablations to test when DoRA helps. Our LoRA implementation follows uses the same hyperparameters as the DoRA paper's LoRA baseline instead of the original LoRA paper.
 
 = Chosen Result
 
