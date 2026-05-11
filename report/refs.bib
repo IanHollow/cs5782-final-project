@@ -2,36 +2,187 @@
   author = {Liu, Shih-Yang and Wang, Chien-Yi and Yin, Hongxu and Molchanov, Pavlo and Wang, Yu-Chiang Frank and Cheng, Kwang-Ting and Chen, Min-Hung},
   title = {{DoRA}: Weight-Decomposed Low-Rank Adaptation},
   booktitle = {Proceedings of the 41st International Conference on Machine Learning},
+  series = {Proceedings of Machine Learning Research},
+  volume = {235},
+  pages = {32100--32121},
+  publisher = {PMLR},
   year = {2024},
-  note = {Oral presentation},
-  url = {https://arxiv.org/abs/2402.09353}
+  url = {https://proceedings.mlr.press/v235/liu24bn.html},
+  note = {Oral presentation}
 }
 
 @misc{nvlabsdora,
   author = {{NVIDIA Research}},
-  title = {{NVlabs/DoRA}: Official PyTorch Implementation of {DoRA}},
+  title = {{NVlabs/DoRA}: Official {PyTorch} Implementation of {DoRA}},
   year = {2024},
-  url = {https://github.com/NVlabs/DoRA}
+  url = {https://github.com/NVlabs/DoRA},
+  note = {Accessed: 2026-05-11}
 }
 
-@misc{llmadapters,
-  author = {Hu, Zhiqiang and Wang, Lei and Lan, Yihuai and Xu, Wanyu and Lim, Ee-Peng and Bing, Lidong and Xu, Xing and Poria, Soujanya and Lee, Roy Ka-Wei},
-  title = {{LLM-Adapters}: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models},
+@inproceedings{llmadapters,
+  author = {Hu, Zhiqiang and Wang, Lei and Lan, Yihuai and Xu, Wanyu and Lim, Ee-Peng and Bing, Lidong and Xu, Xing and Poria, Soujanya and Lee, Roy},
+  title = {{LLM}-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models},
+  booktitle = {Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing},
+  pages = {5254--5276},
+  publisher = {Association for Computational Linguistics},
+  address = {Singapore},
   year = {2023},
-  url = {https://arxiv.org/abs/2304.01933}
+  doi = {10.18653/v1/2023.emnlp-main.319}
+}
+
+@misc{agiedgerunnersdata,
+  author = {{AGI-Edgerunners}},
+  title = {{LLM-Adapters} Fine-Tuning Datasets},
+  year = {2023},
+  url = {https://github.com/AGI-Edgerunners/LLM-Adapters/tree/main/ft-training_set},
+  note = {Accessed: 2026-05-11}
 }
 
 @inproceedings{hu2022lora,
   author = {Hu, Edward J. and Shen, Yelong and Wallis, Phillip and Allen-Zhu, Zeyuan and Li, Yuanzhi and Wang, Shean and Wang, Lu and Chen, Weizhu},
   title = {{LoRA}: Low-Rank Adaptation of Large Language Models},
-  booktitle = {International Conference on Learning Representations},
+  booktitle = {The Tenth International Conference on Learning Representations},
+  publisher = {OpenReview.net},
   year = {2022},
-  url = {https://arxiv.org/abs/2106.09685}
+  url = {https://openreview.net/forum?id=nZeVKeeFYf9}
 }
 
-@misc{transformers,
-  author = {{Hugging Face}},
-  title = {Transformers Documentation},
-  year = {2026},
-  url = {https://huggingface.co/docs/transformers}
+@inproceedings{wolf2020transformers,
+  author = {Wolf, Thomas and Debut, Lysandre and Sanh, Victor and Chaumond, Julien and Delangue, Clement and Moi, Anthony and Cistac, Pierric and Rault, Tim and Louf, Remi and Funtowicz, Morgan and Davison, Joe and Shleifer, Sam and von Platen, Patrick and Ma, Clara and Jernite, Yacine and Plu, Julien and Xu, Canwen and Le Scao, Teven and Gugger, Sylvain and Drame, Mariama and Lhoest, Quentin and Rush, Alexander},
+  title = {Transformers: State-of-the-Art Natural Language Processing},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing: System Demonstrations},
+  pages = {38--45},
+  publisher = {Association for Computational Linguistics},
+  address = {Online},
+  year = {2020},
+  doi = {10.18653/v1/2020.emnlp-demos.6}
+}
+
+@inproceedings{lhoest2021datasets,
+  author = {Lhoest, Quentin and Villanova del Moral, Albert and Jernite, Yacine and Thakur, Abhishek and von Platen, Patrick and Patil, Suraj and Chaumond, Julien and Drame, Mariama and Plu, Julien and Tunstall, Lewis and Davison, Joe and {\v{S}}a{\v{s}}ko, Mario and Chhablani, Gunjan and Malik, Bhavitvya and Brandeis, Simon and Le Scao, Teven and Sanh, Victor and Xu, Canwen and Patry, Nicolas and McMillan-Major, Angelina and Schmid, Philipp and Gugger, Sylvain and Delangue, Clement and Matussiere, Theo and Debut, Lysandre and Bekman, Stas and Cistac, Pierric and Goehringer, Thibault and Mustar, Victor and Lagunas, Francois and Rush, Alexander and Wolf, Thomas},
+  title = {Datasets: A Community Library for Natural Language Processing},
+  booktitle = {Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing: System Demonstrations},
+  pages = {175--184},
+  publisher = {Association for Computational Linguistics},
+  address = {Online and Punta Cana, Dominican Republic},
+  year = {2021},
+  doi = {10.18653/v1/2021.emnlp-demo.21}
+}
+
+@inproceedings{paszke2019pytorch,
+  author = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and Gimelshein, Natalia and Antiga, Luca and Desmaison, Alban and Kopf, Andreas and Yang, Edward and DeVito, Zachary and Raison, Martin and Tejani, Alykhan and Chilamkurthy, Sasank and Steiner, Benoit and Fang, Lu and Bai, Junjie and Chintala, Soumith},
+  title = {{PyTorch}: An Imperative Style, High-Performance Deep Learning Library},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume = {32},
+  pages = {8024--8035},
+  year = {2019},
+  url = {https://proceedings.neurips.cc/paper/2019/hash/bdbca288fee7f92f2bfa9f7012727740-Abstract.html}
+}
+
+@article{touvron2023llama,
+  author = {Touvron, Hugo and Martin, Louis and Stone, Kevin and Albert, Peter and Almahairi, Amjad and Babaei, Yasmine and Bashlykov, Nikolay and Batra, Soumya and Bhargava, Prajjwal and Bhosale, Shruti and Bikel, Dan and Blecher, Lukas and Canton Ferrer, Cristian and Chen, Moya and Cucurull, Guillem and Esiobu, David and Fernandes, Jude and Fu, Jeremy and Fu, Wenyin and Fuller, Brian and Gao, Cynthia and Goswami, Vedanuj and Goyal, Naman and Hartshorn, Anthony and Hosseini, Saghar and Hou, Rui and Inan, Hakan and Kardas, Marcin and Kerkez, Viktor and Khabsa, Madian and Kloumann, Isabel and Korenev, Artem and Koura, Punit Singh and Lachaux, Marie-Anne and Lavril, Thibaut and Lee, Jenya and Liskovich, Diana and Lu, Yinghai and Mao, Yuning and Martinet, Xavier and Mihaylov, Todor and Mishra, Pushkar and Molybog, Igor and Nie, Yixin and Poulton, Andrew and Reizenstein, Jeremy and Rungta, Rashi and Saladi, Kalyan and Schelten, Alan and Silva, Ruan and Smith, Eric Michael and Subramanian, Ranjan and Tan, Xiaoqing Ellen and Tang, Binh and Taylor, Ross and Williams, Adina and Kuan, Jian Xiang and Xu, Puxin and Yan, Zheng and Zarov, Iliyan and Zhang, Yuchen and Fan, Angela and Kambadur, Melanie and Narang, Sharan and Rodriguez, Aurelien and Stojnic, Robert and Edunov, Sergey and Scialom, Thomas},
+  title = {Llama 2: Open Foundation and Fine-Tuned Chat Models},
+  journal = {CoRR},
+  volume = {abs/2307.09288},
+  year = {2023},
+  doi = {10.48550/arXiv.2307.09288},
+  eprint = {2307.09288},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{dettmers2023qlora,
+  author = {Dettmers, Tim and Pagnoni, Artidoro and Holtzman, Ari and Zettlemoyer, Luke},
+  title = {{QLoRA}: Efficient Finetuning of Quantized {LLMs}},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume = {36},
+  year = {2023},
+  url = {https://proceedings.neurips.cc/paper_files/paper/2023/hash/1feb87871436031bdc0f2beaa62a049b-Abstract-Conference.html}
+}
+
+@incollection{bisong2019colab,
+  author = {Bisong, Ekaba},
+  title = {Google Colaboratory},
+  booktitle = {Building Machine Learning and Deep Learning Models on Google Cloud Platform},
+  pages = {59--64},
+  publisher = {Apress},
+  address = {Berkeley, CA},
+  year = {2019},
+  doi = {10.1007/978-1-4842-4470-8_7}
+}
+
+@inproceedings{clark2019boolq,
+  author = {Clark, Christopher and Lee, Kenton and Chang, Ming-Wei and Kwiatkowski, Tom and Collins, Michael and Toutanova, Kristina},
+  title = {{BoolQ}: Exploring the Surprising Difficulty of Natural Yes/No Questions},
+  booktitle = {Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers)},
+  pages = {2924--2936},
+  publisher = {Association for Computational Linguistics},
+  address = {Minneapolis, Minnesota},
+  year = {2019},
+  doi = {10.18653/v1/N19-1300}
+}
+
+@article{bisk2020piqa,
+  author = {Bisk, Yonatan and Zellers, Rowan and Le Bras, Ronan and Gao, Jianfeng and Choi, Yejin},
+  title = {{PIQA}: Reasoning about Physical Commonsense in Natural Language},
+  journal = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume = {34},
+  number = {5},
+  pages = {7432--7439},
+  year = {2020},
+  doi = {10.1609/aaai.v34i05.6239}
+}
+
+@inproceedings{sap2019socialiqa,
+  author = {Sap, Maarten and Rashkin, Hannah and Chen, Derek and Le Bras, Ronan and Choi, Yejin},
+  title = {Social {IQa}: Commonsense Reasoning about Social Interactions},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
+  pages = {4463--4473},
+  publisher = {Association for Computational Linguistics},
+  address = {Hong Kong, China},
+  year = {2019},
+  doi = {10.18653/v1/D19-1454}
+}
+
+@inproceedings{zellers2019hellaswag,
+  author = {Zellers, Rowan and Holtzman, Ari and Bisk, Yonatan and Farhadi, Ali and Choi, Yejin},
+  title = {{HellaSwag}: Can a Machine Really Finish Your Sentence?},
+  booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
+  pages = {4791--4800},
+  publisher = {Association for Computational Linguistics},
+  address = {Florence, Italy},
+  year = {2019},
+  doi = {10.18653/v1/P19-1472}
+}
+
+@article{sakaguchi2020winogrande,
+  author = {Sakaguchi, Keisuke and Le Bras, Ronan and Bhagavatula, Chandra and Choi, Yejin},
+  title = {{WinoGrande}: An Adversarial Winograd Schema Challenge at Scale},
+  journal = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume = {34},
+  number = {5},
+  pages = {8732--8740},
+  year = {2020},
+  doi = {10.1609/aaai.v34i05.6399}
+}
+
+@article{clark2018arc,
+  author = {Clark, Peter and Cowhey, Isaac and Etzioni, Oren and Khot, Tushar and Sabharwal, Ashish and Schoenick, Carissa and Tafjord, Oyvind},
+  title = {Think You Have Solved Question Answering? Try {ARC}, the {AI2} Reasoning Challenge},
+  journal = {CoRR},
+  volume = {abs/1803.05457},
+  year = {2018},
+  eprint = {1803.05457},
+  archivePrefix = {arXiv},
+  url = {https://arxiv.org/abs/1803.05457}
+}
+
+@inproceedings{mihaylov2018openbookqa,
+  author = {Mihaylov, Todor and Clark, Peter and Khot, Tushar and Sabharwal, Ashish},
+  title = {Can a Suit of Armor Conduct Electricity? A New Dataset for Open Book Question Answering},
+  booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
+  pages = {2381--2391},
+  publisher = {Association for Computational Linguistics},
+  address = {Brussels, Belgium},
+  year = {2018},
+  doi = {10.18653/v1/D18-1260}
 }

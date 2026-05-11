@@ -40,13 +40,13 @@
   body-size: 11pt,
   body-leading: 0.40em,
   paragraph-spacing: 0.72em,
-  heading-size: 11pt,
+  heading-size: 12pt,
   abstract-size: 11pt,
   caption-size: 11pt,
   reference-size: 11pt,
   title-size: 17pt,
   author-name-size: 11pt,
-  author-detail-size: 11pt,
+  author-detail-size: 10pt,
   author-leading: 0.40em,
   title-clearance: 12pt,
   figure-spacing: 5pt,
@@ -67,11 +67,11 @@ LoRA keeps a pretrained weight $W$ frozen and learns a low-rank residual $Delta 
 
 $ W' = m dot (W + Delta W) / norm(W + Delta W). $
 
-Our contribution is a reproduction of DoRA adjusted for the smaller training set and the Colab runtime with 4-bit NF4 quantization enabled to make the 7B experiments practical under our compute constraints. We implemented both LoRA and DoRA from scratch in PyTorch, reproduced the DoRA paper's main LoRA-vs-DoRA comparison on Meta's LLaMA-2-7B model, and added scope ablations plus a supplementary rank sweep to better understand where DoRA helps. Our LoRA implementation uses the same hyperparameters as the DoRA paper's LoRA baseline instead of the original LoRA paper.
+Our contribution is a reproduction of DoRA adjusted for the smaller training set and the Colab runtime with 4-bit NF4 quantization enabled to make the 7B experiments practical under our compute constraints. We implemented both LoRA and DoRA from scratch in PyTorch @paszke2019pytorch, reproduced the DoRA paper's main LoRA-vs-DoRA comparison on Meta's LLaMA-2-7B model @touvron2023llama, and added scope ablations plus a supplementary rank sweep to better understand where DoRA helps. Our LoRA implementation uses the same hyperparameters as the DoRA paper's LoRA baseline instead of the original LoRA paper.
 
 = Chosen Result
 
-We targeted Table 1 of the DoRA paper for the LLaMA-2-7B model, comparing LoRA rank 32 against rank-halved DoRA rank 16 on all 8 benchmarks that the paper used. This table is central to the paper because it supports DoRA's main claim that it has higher accuracy than LoRA with fewer trainable parameters. The official result reports macro accuracy rising from 77.6% for LoRA to 80.5% for DoRA rank 16 while trainable parameters fall from 0.83% to 0.43%.
+We targeted Table 1 of the DoRA paper for the LLaMA-2-7B model, comparing LoRA rank 32 against rank-halved DoRA rank 16 on all 8 benchmarks that the paper used. The benchmark suite covers BoolQ @clark2019boolq, PIQA @bisk2020piqa, Social IQA @sap2019socialiqa, HellaSwag @zellers2019hellaswag, WinoGrande @sakaguchi2020winogrande, ARC-Easy and ARC-Challenge @clark2018arc, and OpenBookQA @mihaylov2018openbookqa. This table is central to the paper because it supports DoRA's main claim that it has higher accuracy than LoRA with fewer trainable parameters. The official result reports macro accuracy rising from 77.6% for LoRA to 80.5% for DoRA rank 16 while trainable parameters fall from 0.83% to 0.43%.
 
 We chose this result because it is quantitative, directly tied to the paper's main contribution, and feasible to investigate under our compute constraints and time. Our deliberate scale change was training on a 15k commonsense subset instead of the paper's 170k training set. This smaller setting still tests the core claim because matched LoRA and DoRA runs share the same base model, data subset, prompts, benchmark files, seed, and evaluation. We also added supplementary experiments beyond the main reproduction, including adapter-placement ablations and a rank sweep that aligns with section 5.5 in the DoRA paper.
 
@@ -86,7 +86,8 @@ We chose this result because it is quantitative, directly tied to the paper's ma
     stroke: (_, y) => if y <= 1 { (top: 0.45pt) } else { none },
     table.header[Component][Choice],
     [Model], [Meta LLaMA-2-7B, frozen base weights],
-    [Training data], [Commonsense 15k instead of the paper's 170k version],
+    [Training data],
+    [AGI-Edgerunners/LLM-Adapters Commonsense 15k fine-tuning file @agiedgerunnersdata],
 
     [Benchmarks],
     [BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, OpenBookQA],
@@ -99,11 +100,11 @@ We chose this result because it is quantitative, directly tied to the paper's ma
   ),
 ) <tab:setup>
 
-The implementation uses Hugging Face Transformers only for model and tokenizer loading @transformers. The PEFT logic is implemented form scratch in our repository using PyTorch. Our LoRA adapter wraps a frozen base linear layer and adds a learned low-rank residual. Our DoRA adapter initializes a trainable per-output-channel magnitude from the pretrained weight norm, adds the low-rank update to the frozen weight, normalizes the resulting direction, and rescales it by the learned magnitude.
+The implementation uses Hugging Face Transformers only for model and tokenizer loading @wolf2020transformers, Hugging Face Datasets for dataset materialization @lhoest2021datasets, and PyTorch for tensor operations and adapter modules @paszke2019pytorch. The PEFT logic is implemented from scratch in our repository. Our LoRA adapter wraps a frozen base linear layer and adds a learned low-rank residual. Our DoRA adapter initializes a trainable per-output-channel magnitude from the pretrained weight norm, adds the low-rank update to the frozen weight, normalizes the resulting direction, and rescales it by the learned magnitude.
 
 The system also implements in-place adapter injection after freezing the base model, adapter-only checkpoints, reloadable configs, standard linear and 4-bit quantized linear targets, benchmark evaluation, and result aggregation. For our additional experiment, the ablation study, we evaluated three adapter scopes. Full adapters on query, key, value, up, and down projections. Then  Attention-only adapters on query, key, and value. Then finally on, MLP-only adapters on up and down projections. This ablation tests whether DoRA is a local formula improvement or whether it needs broad transformer coverage. The full scope matches the DoRA paper's settings for both LoRA and DoRA, but it is important to note the original LoRA paper uses the attention-only scope with the addition of the the output projection.
 
-We kept the comparison controlled by keeping the base model, 15k subset, prompt and evaluation code, seed, benchmark files, and macro average metric fixed across matched LoRA and DoRA runs. We used a Google Colab A100 GPU with 4-bit NF4 quantization to reduce the model's memory footprint. This quantized setup can add some noise and shift absolute scores slightly, so it may keep us from matching the paper exactly, but it should not change the overall trend of the comparison. Additionally, correctness of the reimplementation is supported by passing a test suite with 50 tests covering adapter math, injection, checkpointing, config loading, data processing, evaluation, and CLI behavior. The main limitations are practical, including one seed, 15k rather than 170k training examples, and no exhaustive rank or learning-rate sweep.
+We kept the comparison controlled by keeping the base model, 15k subset, prompt and evaluation code, seed, benchmark files, and macro average metric fixed across matched LoRA and DoRA runs. We used a Google Colab A100 GPU @bisong2019colab with 4-bit NF4 quantization @dettmers2023qlora to reduce the model's memory footprint. This quantized setup can add some noise and shift absolute scores slightly, so it may keep us from matching the paper exactly, but it should not change the overall trend of the comparison. Additionally, correctness of the reimplementation is supported by passing a test suite with 50 tests covering adapter math, injection, checkpointing, config loading, data processing, evaluation, and CLI behavior. The main limitations are practical, including one seed, 15k rather than 170k training examples, and no exhaustive rank or learning-rate sweep.
 
 = Results & Analysis
 
