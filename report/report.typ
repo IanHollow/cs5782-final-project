@@ -67,7 +67,7 @@ LoRA keeps a pretrained weight $W$ frozen and learns a low-rank residual $Delta 
 
 $ W' = m dot (W + Delta W) / norm(W + Delta W). $
 
-Our contribution is a reproduction of DoRA adjusted for fine-tuning dataset size and the number of LLMs tested based on compute and time constraints. We implemented both LoRA and DoRA from scratch in PyTorch, reproduced the DoRA paper's main LoRA-vs-DoRA comparison on Meta's LLaMA-2-7B model, and added scope ablations plus a supplementary rank sweep to test when DoRA helps. Our LoRA implementation uses the same hyperparameters as the DoRA paper's LoRA baseline instead of the original LoRA paper.
+Our contribution is a reproduction of DoRA adjusted for the smaller training set and the Colab runtime with 4-bit NF4 quantization enabled to make the 7B experiments practical under our compute constraints. We implemented both LoRA and DoRA from scratch in PyTorch, reproduced the DoRA paper's main LoRA-vs-DoRA comparison on Meta's LLaMA-2-7B model, and added scope ablations plus a supplementary rank sweep to better understand where DoRA helps. Our LoRA implementation uses the same hyperparameters as the DoRA paper's LoRA baseline instead of the original LoRA paper.
 
 = Chosen Result
 
@@ -79,7 +79,7 @@ We chose this result because it is quantitative, directly tied to the paper's ma
 
 #figure(
   placement: none,
-  caption: [Experimental setup. The 15k subset is the deliberate scale reduction; the model family, benchmark suite, rank-halved comparison, and metric follow the paper's commonsense setting.],
+  caption: [Experimental setup],
   table(
     columns: (0.25fr, 0.70fr),
     align: (left, left),
@@ -91,7 +91,7 @@ We chose this result because it is quantitative, directly tied to the paper's ma
     [Benchmarks],
     [BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, OpenBookQA],
 
-    [Runtime], [Google Colab A100 with 4-bit NF4],
+    [Runtime], [Google Colab A100 with 4-bit NF4 quantization],
     [Main comp.], [LoRA rank 32 vs. DoRA rank 16],
 
     [Training/eval],
@@ -99,11 +99,11 @@ We chose this result because it is quantitative, directly tied to the paper's ma
   ),
 ) <tab:setup>
 
-The implementation uses Hugging Face Transformers only for model/tokenizer loading @transformers. The PEFT logic is repo-owned. Our LoRA adapter wraps a frozen base linear layer and adds a learned low-rank residual. Our DoRA adapter initializes a trainable per-output-channel magnitude from the pretrained weight norm, adds the low-rank update to the frozen weight, normalizes the resulting direction, and rescales it by the learned magnitude.
+The implementation uses Hugging Face Transformers only for model and tokenizer loading @transformers. The PEFT logic is implemented form scratch in our repository using PyTorch. Our LoRA adapter wraps a frozen base linear layer and adds a learned low-rank residual. Our DoRA adapter initializes a trainable per-output-channel magnitude from the pretrained weight norm, adds the low-rank update to the frozen weight, normalizes the resulting direction, and rescales it by the learned magnitude.
 
-The system also implements in-place adapter injection after freezing the base model, adapter-only checkpoints, reloadable configs, standard linear and 4-bit quantized linear targets, benchmark evaluation, and result aggregation. We evaluated three adapter scopes: full adapters on query, key, value, up, and down projections; attention-only adapters on query, key, and value; and MLP-only adapters on up and down projections. This ablation tests whether DoRA is a local formula improvement or whether it needs broad transformer coverage.
+The system also implements in-place adapter injection after freezing the base model, adapter-only checkpoints, reloadable configs, standard linear and 4-bit quantized linear targets, benchmark evaluation, and result aggregation. For our additional experiment, the ablation study, we evaluated three adapter scopes. Full adapters on query, key, value, up, and down projections. Then  Attention-only adapters on query, key, and value. Then finally on, MLP-only adapters on up and down projections. This ablation tests whether DoRA is a local formula improvement or whether it needs broad transformer coverage. The full scope matches the DoRA paper's settings for both LoRA and DoRA, but it is important to note the original LoRA paper uses the attention-only scope with the addition of the the output projection.
 
-We kept the comparison controlled: same base model, 15k subset, prompt/evaluation code, seed, benchmark files, and macro-average metric for matched LoRA and DoRA runs. Correctness is supported by 14 test files with 50 tests covering adapter math, injection, checkpointing, config loading, data processing, evaluation, and CLI behavior. The main limitations are practical: one seed, Colab A100 4-bit runtime, 15k instead of 170k training examples, and no full hyperparameter search.
+We kept the comparison controlled by keeping the base model, 15k subset, prompt and evaluation code, seed, benchmark files, and macro average metric fixed across matched LoRA and DoRA runs. We used a Google Colab A100 GPU with 4-bit NF4 quantization to reduce the model's memory footprint. This quantized setup can add some noise and shift absolute scores slightly, so it may keep us from matching the paper exactly, but it should not change the overall trend of the comparison. Additionally, correctness of the reimplementation is supported by passing a test suite with 50 tests covering adapter math, injection, checkpointing, config loading, data processing, evaluation, and CLI behavior. The main limitations are practical, including one seed, 15k rather than 170k training examples, and no exhaustive rank or learning-rate sweep.
 
 = Results & Analysis
 
@@ -122,7 +122,7 @@ We kept the comparison controlled: same base model, 15k subset, prompt/evaluatio
   ),
 ) <tab:main-results>
 
-The headline result directionally reproduces the paper's central finding. Full-scope rank-halved DoRA improved macro accuracy from 77.41% to 79.20%, a +1.79 point gain, while reducing trainable parameters from 0.83% to 0.43%. Our LoRA baseline is close to the paper's LoRA row (77.41% vs. 77.60%), suggesting that the evaluation pipeline is reasonably calibrated. Our DoRA score is below the paper's 80.50% reference, which is expected given the reduced data scale and limited search budget.
+The headline result directionally reproduces the paper's central finding. Full-scope rank-halved DoRA improved macro accuracy from 77.41% to 79.20%, a +1.79 point gain, while reducing trainable parameters from 0.83% to 0.43%. Our LoRA baseline is close to the DoRA paper's LoRA results (77.41% vs. 77.60%), suggesting that the evaluation pipeline is accurate. Our DoRA score is below the paper's 80.50% reference, which is expected given the reduced training data scale, the small amount of noise introduced by the quantized runtime, and the fact that we did not run an exhaustive hyperparameter sweep.
 
 #figure(
   placement: none,
@@ -138,14 +138,18 @@ The headline result directionally reproduces the paper's central finding. Full-s
   ),
 ) <tab:ablations>
 
-The ablation study is our main independent finding. DoRA is not universally better than LoRA under every adapter placement. Full-scope DoRA won or tied seven of eight tasks, with its largest gains on HellaSwag (+6.0 points), ARC-Challenge (+3.68), and OpenBookQA (+2.40). Attention-only DoRA lost on seven of eight tasks and fell by -1.50 macro points. MLP-only DoRA was roughly tied, gaining only +0.15 macro points. This changes the interpretation from "DoRA is better" to "DoRA helps most when the adapter scope covers enough transformer computation."
+The ablation study is our main independent experiment. DoRA is not universally better than LoRA under every adapter placement. Full-scope DoRA won or tied seven of eight tasks, with its largest gains on HellaSwag (+6.0 points), ARC-Challenge (+3.68), and OpenBookQA (+2.40). Meanwhile, attention-only DoRA lost on seven of eight tasks and fell by -1.50 macro points. MLP-only DoRA was roughly tied, gaining only +0.15 macro points. This shows that DoRA's improvements over LoRA are dependent on the adapter placement and DoRA tends to do better when applied broadly across the transformer.
 
-The rank sweep is supplementary evidence rather than the main reproduced claim. The DoRA paper itself studies rank robustness in section 5.5 by varying r over {4, 8, 16, 32, 64}, and our sweep follows that idea at project scale. Rank-8 full-scope DoRA reached 80.02% macro accuracy with only 0.221% trainable parameters, outperforming rank-16 in our one-seed runs. Without repeated seeds or a learning-rate grid, we do not claim that rank 8 is generally optimal. The broader lesson is that PEFT methods should be evaluated as full recipes including target modules, rank, learning rate, quantization, and evaluation extraction, not only as adapter formulas.
+The rank sweep is supplementary evidence rather than the main reproduced claim. The DoRA paper itself studies rank robustness in section 5.5 by varying the rank size (over 4, 8, 16, 32, 64), and our sweep follows that idea but slightly scaled down testing 4, 8, and 16.
+
+Rank-8 full-scope DoRA reached 80.02% macro accuracy with only 0.221% trainable parameters, outperforming rank-16 in our one-seed runs. However, without repeated seeds or a learning-rate grid, we do not claim that rank 8 is generally optimal. Also, there is an expected amount of noise in the results. Even the official DoRA paper shows DoRA rank 8 performing slightly higher than DoRA rank 8, but this is on the LLaMA-7B model not the LLaMA-2-7B model which we have been using.
+
+The bigger takeaway about the rank sweep is that DoRA's consistently has higher accuracy than LoRA at the same rank size. Also, that LoRA's accuracy drops off faster than DoRA's as the rank size decreases. Overall, the rank sweep results show the same general trend as the official DoRA paper's section 5.5, showing that DoRA is more robust to rank size reductions than LoRA.
 
 = Reflections
 
 Reimplementing DoRA exposed details that wrapper-based experiments tend to hide. Correctness depended on target-module names, quantized weight dequantization, magnitude initialization, bias handling, prompt formatting, answer extraction, and adapter checkpoint compatibility. These engineering details were not peripheral. They determined whether the reproduction was meaningful.
 
-The project also clarified the limits of our evidence. We did not reproduce the paper's full data scale, seed count, or training budget, so our absolute numbers should not be read as replacements for the official table. The controlled local comparison is still informative: LoRA lands close to the paper, full-scope DoRA improves in the expected direction with fewer trainable parameters, and the supplementary ablations identify adapter placement and rank as key conditions for that improvement.
+The project also clarified the limits of our evidence. We did not reproduce the paper's full data scale, seed count, or training budget, and the quantized runtime may shift absolute scores slightly, so our numbers should not be read as replacements for the official table. The controlled local comparison is still informative: LoRA lands close to the paper, full-scope DoRA improves in the expected direction with fewer trainable parameters, and the supplementary ablations identify adapter placement and rank as key conditions for that improvement.
 
 Given more time, we would train on the full Commonsense 170k dataset, repeat each condition across seeds, compare directly against the NVlabs implementation @nvlabsdora, and run a controlled rank/learning-rate grid. We would also add error analysis for HellaSwag and ARC-Challenge to determine whether the largest DoRA gains reflect better physical commonsense, answer calibration, or benchmark-specific artifacts.
