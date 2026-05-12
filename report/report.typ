@@ -71,9 +71,9 @@ Our contribution is a reproduction of DoRA adjusted for the smaller training set
 
 = Chosen Result
 
-We targeted Table 1 of the DoRA paper for the LLaMA-2-7B model, comparing LoRA rank 32 against DoRA rank 16 halved on all 8 benchmarks used in the paper. The benchmark suite covers BoolQ @clark2019boolq, PIQA @bisk2020piqa, Social IQA @sap2019socialiqa, HellaSwag @zellers2019hellaswag, WinoGrande @sakaguchi2020winogrande, ARC-Easy and ARC-Challenge @clark2018arc, and OpenBookQA @mihaylov2018openbookqa. This table is central to the paper because it supports DoRA's main claim that it has higher accuracy than LoRA with fewer trainable parameters. The official result reports macro accuracy rising from 77.6% for LoRA to 80.5% for DoRA rank 16, while trainable parameters fall from 0.83% to 0.43%.
+We targeted Table 1 of the DoRA paper for the LLaMA-2-7B model, comparing LoRA rank 32 against DoRA rank 16 halved on all 8 benchmarks used in the paper. This table is central to the paper because it supports DoRA's main claim that it has higher accuracy than LoRA with fewer trainable parameters. The official result reports macro accuracy rising from 77.6% for LoRA to 80.5% for DoRA rank 16, while trainable parameters fall from 0.83% to 0.43%.
 
-We chose this result because it is quantitative, directly tied to the paper's main contribution, and feasible to investigate within our computational and time constraints. Our deliberate scale change was training on a 15k commonsense subset instead of the paper's 170k training set. This smaller setting still tests the core claim because matched LoRA and DoRA runs share the same base model, data subset, prompts, benchmark files, seed, and evaluation. We also added supplementary experiments beyond the main reproduction, including adapter-placement ablations and a rank sweep consistent with section 5.5 of the DoRA paper.
+We chose this result because it is quantitative, directly tied to the paper's main contribution, and feasible to investigate within our computational and time constraints. Our deliberate scale change was training on a 15k commonsense subset instead of the paper's 170k training set. This smaller setting still tests the core claim because the matched LoRA and DoRA runs were evaluated under the same experimental setup. We also added supplementary experiments beyond the main reproduction, including adapter-placement ablations and a rank sweep consistent with section 5.5 of the DoRA paper.
 
 = Methodology
 
@@ -85,14 +85,14 @@ We chose this result because it is quantitative, directly tied to the paper's ma
     align: (left, left),
     stroke: (_, y) => if y <= 1 { (top: 0.45pt) } else { none },
     table.header[Component][Choice],
-    [Model], [Meta LLaMA-2-7B, frozen base weights],
+    [Model], [Meta LLaMA-2-7B],
     [Training data],
     [AGI-Edgerunners/LLM-Adapters Commonsense 15k fine-tuning file @agiedgerunnersdata],
 
     [Benchmarks],
     [BoolQ, PIQA, Social IQA, HellaSwag, WinoGrande, ARC-Easy, ARC-Challenge, OpenBookQA],
 
-    [Runtime], [Google Colab A100 with 4-bit NF4 quantization],
+    [Runtime], [Google Colab A100],
     [Main comp.], [LoRA rank 32 vs. DoRA rank 16],
 
     [Training/eval],
@@ -123,7 +123,7 @@ We controlled the comparison by keeping the base model, 15k subset, prompt, eval
   ),
 ) <tab:main-results>
 
-The headline result directionally reproduces the paper's central finding. Full-scope rank-halved DoRA improved macro accuracy from 77.41% to 79.20%, a +1.79 point gain, while reducing trainable parameters from 0.83% to 0.43%. Our LoRA baseline is close to the DoRA paper's LoRA results (77.41% vs. 77.60%), suggesting that the evaluation pipeline is accurate. Our DoRA score is below the paper's 80.50% reference, which is expected given the reduced training data scale, the small amount of noise introduced by the quantized runtime, and the lack of an exhaustive hyperparameter sweep.
+The headline result directionally reproduces the paper's central finding. Full-scope rank-halved DoRA improved macro accuracy from 77.41% to 79.20%, while reducing trainable parameters from 0.83% to 0.43%. Our LoRA baseline is close to the DoRA paper's LoRA results (77.41% vs. 77.60%), suggesting that the evaluation pipeline is accurate. Our DoRA score is below the paper's 80.50% reference, which is expected given the reduced training data scale, the small amount of noise introduced by the quantized runtime, and the lack of an exhaustive hyperparameter sweep.
 
 #figure(
   placement: none,
