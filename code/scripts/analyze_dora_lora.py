@@ -600,6 +600,109 @@ def fig6_rank_scaling(ranked_df: pd.DataFrame, out: Path) -> None:
     _save(fig, out, dpi=220)
 
 
+def fig6_rank_scaling_report(ranked_df: pd.DataFrame, out_stem: Path) -> None:
+    """Create a compact rank-scaling figure sized for the two-column report."""
+    plot_df = ranked_df.copy()
+    plot_df = plot_df[~((plot_df["method"] == "lora") & (plot_df["rank"] == 32))].copy()
+    plot_df = plot_df.sort_values(["method_label", "rank"])
+    palette = {"LoRA": LORAX_ORANGE, "DoRA": DORAEMON_BLUE}
+
+    fig, ax = plt.subplots(figsize=(3.45, 2.25))
+
+    lora = plot_df[plot_df["method_label"] == "LoRA"]
+    dora = plot_df[plot_df["method_label"] == "DoRA"]
+    ax.fill_between(
+        dora["rank"],
+        lora["macro_points"],
+        dora["macro_points"],
+        color=DORAEMON_BLUE,
+        alpha=0.08,
+        linewidth=0,
+        zorder=1,
+    )
+
+    for method_label, method_df in [("LoRA", lora), ("DoRA", dora)]:
+        ax.plot(
+            method_df["rank"],
+            method_df["macro_points"],
+            color=palette[method_label],
+            marker="o",
+            markersize=4.8,
+            markeredgecolor="white",
+            markeredgewidth=0.8,
+            linewidth=2.0,
+            label=method_label,
+            zorder=3,
+        )
+
+    label_offsets = {
+        ("LoRA", 4): (-2, 7),
+        ("LoRA", 8): (-1, 7),
+        ("LoRA", 16): (0, 7),
+        ("DoRA", 4): (2, 7),
+        ("DoRA", 8): (0, 7),
+        ("DoRA", 16): (0, -12),
+    }
+    for row in plot_df.itertuples(index=False):
+        dx, dy = label_offsets[row.method_label, row.rank]
+        ax.annotate(
+            f"{row.macro_points:.1f}",
+            (row.rank, row.macro_points),
+            textcoords="offset points",
+            xytext=(dx, dy),
+            ha="center",
+            va="center",
+            fontsize=6.7,
+            fontweight="bold",
+            color=palette[row.method_label],
+            zorder=4,
+        )
+
+    for rank in [4, 8, 16]:
+        lora_value = float(lora.loc[lora["rank"] == rank, "macro_points"].iloc[0])
+        dora_value = float(dora.loc[dora["rank"] == rank, "macro_points"].iloc[0])
+        ax.vlines(
+            rank,
+            lora_value,
+            dora_value,
+            color="#8FA1B8",
+            alpha=0.45,
+            linewidth=0.8,
+            linestyle=(0, (2, 2)),
+            zorder=2,
+        )
+
+    ax.set_xlabel("Rank", fontsize=8.5, labelpad=2)
+    ax.set_ylabel("Macro accuracy (%)", fontsize=8.5, labelpad=3)
+    ax.set_xscale("log", base=2)
+    ax.set_xlim(3.7, 17.2)
+    ax.set_xticks([4, 8, 16])
+    ax.set_xticklabels(["4", "8", "16"])
+    ax.set_ylim(75.6, 80.45)
+    ax.set_yticks([76, 77, 78, 79, 80])
+    ax.tick_params(axis="both", labelsize=7.5, length=2.5, pad=2)
+    ax.grid(axis="y", linestyle=(0, (2, 2)), linewidth=0.55, alpha=0.65)
+    ax.grid(axis="x", visible=False)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.17),
+        ncol=2,
+        frameon=False,
+        fontsize=7.6,
+        handlelength=1.9,
+        columnspacing=1.4,
+        borderaxespad=0.0,
+    )
+    sns.despine(ax=ax)
+
+    fig.tight_layout(pad=0.35)
+    for suffix, dpi in [(".pdf", None), (".png", 360)]:
+        out = out_stem.with_suffix(suffix)
+        fig.savefig(out, bbox_inches="tight", facecolor="white", dpi=dpi)
+        print(f"  Saved: {out.name}")
+    plt.close(fig)
+
+
 def print_summary(scope_summary: pd.DataFrame, task_summary: pd.DataFrame) -> None:
     """Print a compact console summary of the key analytical conclusions."""
     print("\n" + "=" * 78)
@@ -670,6 +773,7 @@ def generate_figures(
     fig4_delta_distribution(gains, out_dir / "fig4_delta_distribution.png")
     fig5_official_comparison(official_comparison, out_dir / "fig5_official_comparison.png")
     fig6_rank_scaling(ranked_df, out_dir / "fig6_rank_scaling.png")
+    fig6_rank_scaling_report(ranked_df, out_dir / "fig6_rank_scaling_report")
 
 
 def main() -> None:

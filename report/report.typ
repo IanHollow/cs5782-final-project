@@ -143,9 +143,13 @@ The ablation study is our main independent experiment. DoRA is not universally b
 
 The rank sweep is supplementary evidence rather than the main reproduced claim. The DoRA paper itself studies rank robustness in section 5.5 by varying the rank size (4, 8, 16, 32, 64), and our sweep follows that idea, but scaled down to 4, 8, and 16.
 
-Rank-8 full-scope DoRA reached 80.02% macro accuracy with only 0.221% trainable parameters, outperforming rank-16 in our one-seed runs. However, without repeated seeds or a learning-rate grid, we do not claim that rank 8 is generally optimal. Also, there is expected noise in the results. Even the official DoRA paper shows DoRA rank 8 performing slightly higher than DoRA rank 8, but this is on the LLaMA-7B model, not the LLaMA-2-7B model, which we have been using.
+#figure(
+  placement: none,
+  image("../results/fig6_rank_scaling_report.png", width: 100%),
+  caption: [Full-scope rank sweep. DoRA keeps higher macro accuracy than LoRA at matched ranks 4, 8, and 16 in our one-seed reduced-data setting.],
+) <fig:rank-scaling>
 
-The bigger takeaway about the rank sweep is that DoRA consistently has higher accuracy than LoRA at the same rank size. Also, LoRA's accuracy drops off faster than DoRA's as the rank size decreases. Overall, the rank sweep results show the same general trend as the official DoRA paper's section 5.5, showing that DoRA is more robust to rank size reductions than LoRA.
+Rank 8 full scope DoRA reached the highest macro accuracy in our sweep while using only 0.221% trainable parameters. Without repeated seeds or a learning-rate grid, we do not claim that rank 8 is generally optimal. The more safe takeaway from @fig:rank-scaling is that DoRA remains above LoRA at every matched rank, and LoRA's accuracy falls faster as rank decreases. This follows the same general trend as the official DoRA paper's rank robustness study, while using our smaller LLaMA-2-7B reproduction setting.
 
 = Reflections
 
